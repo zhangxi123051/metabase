@@ -65,6 +65,15 @@ class MetadataWrapperApp extends Component {
                             Segments and tables
                         </Link>
                     </li>
+                    <li>
+                        <Link
+                            className="inline-block bordered border-dark rounded p2"
+                            activeClassName="bg-brand text-white border-brand"
+                            to="/admin/datamodel/database/dimensions"
+                        >
+                            Dimensions
+                        </Link>
+                    </li>
                 </ol>
                 { this.props.children }
             </div>
