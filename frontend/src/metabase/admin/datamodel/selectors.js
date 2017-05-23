@@ -78,6 +78,7 @@ export const getDatabaseIdfields      = (state, props) => state.admin.datamodel.
 export const getEditingTable          = (state, props) => state.admin.datamodel.editingTable;
 export const getEditingDatabase       = (state, props) => state.admin.datamodel.editingDatabase;
 
+export const getMetrics               = state => state.admin.datamodel.metrics
 
 export const getEditingDatabaseWithTableMetadataStrengths = createSelector(
     state => state.admin.datamodel.editingDatabase,

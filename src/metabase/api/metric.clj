@@ -46,7 +46,6 @@
     (add-db-ids <>)
     (filter mi/can-read? <>)))
 
-
 (api/defendpoint PUT "/:id"
   "Update a `Metric` with ID."
   [id :as {{:keys [definition name revision_message], :as body} :body}]

@@ -1,7 +1,6 @@
 import React, { Component } from "react";
 import PropTypes from "prop-types";
 
-import MetricsList from "./MetricsList.jsx";
 import ColumnsList from "./ColumnsList.jsx";
 import SegmentsList from "./SegmentsList.jsx";
 
@@ -102,10 +101,6 @@ export default class MetadataTable extends Component {
                     <SegmentsList
                         tableMetadata={tableMetadata}
                         onRetire={this.props.onRetireSegment}
-                    />
-                    <MetricsList
-                        tableMetadata={tableMetadata}
-                        onRetire={this.props.onRetireMetric}
                     />
                     <ColumnsList
                         tableMetadata={tableMetadata}

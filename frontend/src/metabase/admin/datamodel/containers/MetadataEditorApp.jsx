@@ -7,7 +7,6 @@ import _ from "underscore";
 import MetabaseAnalytics from "metabase/lib/analytics";
 
 import AdminEmptyText from "metabase/components/AdminEmptyText.jsx";
-import MetadataHeader from '../components/database/MetadataHeader.jsx';
 import MetadataTablePicker from '../components/database/MetadataTablePicker.jsx';
 import MetadataTable from '../components/database/MetadataTable.jsx';
 import MetadataSchema from '../components/database/MetadataSchema.jsx';
@@ -100,23 +99,16 @@ export default class MetadataEditor extends Component {
             );
         }
         return (
-            <div className="p3">
-                <MetadataHeader
-                    ref="header"
-                    databaseId={this.props.databaseMetadata ? this.props.databaseMetadata.id : null}
-                    databases={this.props.databases}
-                    selectDatabase={this.props.selectDatabase}
-                    isShowingSchema={this.state.isShowingSchema}
-                    toggleShowSchema={this.toggleShowSchema}
+            <div
+                style={{minHeight: "60vh"}}
+                className="flex flex-row flex-full mt2 full-height"
+            >
+                <MetadataTablePicker
+                    tableId={this.props.editingTable}
+                    tables={(this.props.databaseMetadata) ? this.props.databaseMetadata.tables : []}
+                    selectTable={this.props.selectTable}
                 />
-              <div style={{minHeight: "60vh"}} className="flex flex-row flex-full mt2 full-height">
-                    <MetadataTablePicker
-                        tableId={this.props.editingTable}
-                        tables={(this.props.databaseMetadata) ? this.props.databaseMetadata.tables : []}
-                        selectTable={this.props.selectTable}
-                    />
-                    {content}
-                </div>
+                {content}
             </div>
         );
     }

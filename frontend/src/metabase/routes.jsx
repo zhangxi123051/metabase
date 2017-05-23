@@ -45,6 +45,8 @@ import UserSettingsApp from "metabase/user/containers/UserSettingsApp.jsx";
 import DatabaseListApp from "metabase/admin/databases/containers/DatabaseListApp.jsx";
 import DatabaseEditApp from "metabase/admin/databases/containers/DatabaseEditApp.jsx";
 import MetadataEditorApp from "metabase/admin/datamodel/containers/MetadataEditorApp.jsx";
+import MetadataMetricsApp from "metabase/admin/datamodel/containers/MetadataMetricsApp.jsx";
+import MetadataWrapperApp from "metabase/admin/datamodel/containers/MetadataWrapperApp.jsx";
 import MetricApp from "metabase/admin/datamodel/containers/MetricApp.jsx";
 import SegmentApp from "metabase/admin/datamodel/containers/SegmentApp.jsx";
 import RevisionHistoryApp from "metabase/admin/datamodel/containers/RevisionHistoryApp.jsx";
@@ -233,8 +235,9 @@ export const getRoutes = (store) =>
                     <Route path=":databaseId" component={DatabaseEditApp} />
                 </Route>
 
-                <Route path="datamodel" title="Data Model">
-                    <IndexRedirect to="database" />
+                <Route path="datamodel" title="Data Model" component={MetadataWrapperApp}>
+                    <IndexRedirect to="database/metrics" />
+                    <Route path="database/metrics" component={MetadataMetricsApp} />
                     <Route path="database" component={MetadataEditorApp} />
                     <Route path="database/:databaseId" component={MetadataEditorApp} />
                     <Route path="database/:databaseId/:mode" component={MetadataEditorApp} />
