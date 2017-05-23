@@ -46,11 +46,11 @@ class MetadataWrapperApp extends Component {
                         toggleShowSchema={this.toggleShowSchema}
                     />
                 </div>
-                <ol className="flex align-center border-bottom py1">
+                <ol className="flex align-center border-bottom">
                     <li>
                         <Link
-                            className="inline-block bordered border-dark rounded p2"
-                            activeClassName="bg-brand text-white border-brand"
+                            className="inline-block p2 text-bold"
+                            activeClassName="text-brand"
                             to="/admin/datamodel/database/metrics"
                         >
                             Metrics
@@ -58,8 +58,8 @@ class MetadataWrapperApp extends Component {
                     </li>
                     <li>
                         <Link
-                            className="inline-block bordered border-dark rounded p2"
-                            activeClassName="bg-brand text-white border-brand"
+                            className="inline-block p2 text-bold"
+                            activeClassName="text-brand"
                             to="/admin/datamodel/database"
                         >
                             Segments and tables
@@ -67,8 +67,8 @@ class MetadataWrapperApp extends Component {
                     </li>
                     <li>
                         <Link
-                            className="inline-block bordered border-dark rounded p2"
-                            activeClassName="bg-brand text-white border-brand"
+                            className="inline-block p2 text-bold"
+                            activeClassName="text-brand"
                             to="/admin/datamodel/database/dimensions"
                         >
                             Dimensions
