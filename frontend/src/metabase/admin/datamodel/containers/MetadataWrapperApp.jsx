@@ -47,8 +47,24 @@ class MetadataWrapperApp extends Component {
                     />
                 </div>
                 <ol className="flex align-center border-bottom py1">
-                    <li className="bordered rounded p2"><Link to="/admin/datamodel/database/metrics">Metrics</Link></li>
-                    <li className="bordered rounded p2"><Link to="/admin/datamodel/database">Segments & Tables</Link></li>
+                    <li>
+                        <Link
+                            className="inline-block bordered border-dark rounded p2"
+                            activeClassName="bg-brand text-white border-brand"
+                            to="/admin/datamodel/database/metrics"
+                        >
+                            Metrics
+                        </Link>
+                    </li>
+                    <li>
+                        <Link
+                            className="inline-block bordered border-dark rounded p2"
+                            activeClassName="bg-brand text-white border-brand"
+                            to="/admin/datamodel/database"
+                        >
+                            Segments and tables
+                        </Link>
+                    </li>
                 </ol>
                 { this.props.children }
             </div>
