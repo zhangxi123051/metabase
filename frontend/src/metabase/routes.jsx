@@ -46,6 +46,7 @@ import DatabaseListApp from "metabase/admin/databases/containers/DatabaseListApp
 import DatabaseEditApp from "metabase/admin/databases/containers/DatabaseEditApp.jsx";
 import MetadataEditorApp from "metabase/admin/datamodel/containers/MetadataEditorApp.jsx";
 import MetadataMetricsApp from "metabase/admin/datamodel/containers/MetadataMetricsApp.jsx";
+import MetadataDimensionsApp from "metabase/admin/datamodel/containers/MetadataDimensionsApp.jsx";
 import MetadataWrapperApp from "metabase/admin/datamodel/containers/MetadataWrapperApp.jsx";
 import MetricApp from "metabase/admin/datamodel/containers/MetricApp.jsx";
 import SegmentApp from "metabase/admin/datamodel/containers/SegmentApp.jsx";
@@ -236,10 +237,11 @@ export const getRoutes = (store) =>
                 </Route>
 
                 <Route path="datamodel" title="Data Model" component={MetadataWrapperApp}>
-                    <IndexRedirect to="database/metrics" />
-                    <Route path="database/metrics" component={MetadataMetricsApp} />
+                    <IndexRedirect to="database/:databaseId/metrics" />
                     <Route path="database" component={MetadataEditorApp} />
                     <Route path="database/:databaseId" component={MetadataEditorApp} />
+                    <Route path="database/:databaseId/metrics" component={MetadataMetricsApp} />
+                    <Route path="database/:databaseId/dimensions" component={MetadataDimensionsApp} />
                     <Route path="database/:databaseId/:mode" component={MetadataEditorApp} />
                     <Route path="database/:databaseId/:mode/:tableId" component={MetadataEditorApp} />
                     <Route path="metric/create" component={MetricApp} />

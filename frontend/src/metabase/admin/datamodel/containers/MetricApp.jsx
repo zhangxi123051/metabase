@@ -52,12 +52,10 @@ export default class MetricApp extends Component {
 
     render() {
         return (
-            <div>
-                <MetricForm
-                    {...this.props}
-                    onSubmit={this.onSubmit.bind(this)}
-                />
-            </div>
+            <MetricForm
+                {...this.props}
+                onSubmit={this.onSubmit.bind(this)}
+            />
         );
     }
 }

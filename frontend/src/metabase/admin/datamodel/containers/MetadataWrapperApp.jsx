@@ -1,3 +1,4 @@
+/* @flow */
 import React, { Component } from 'react'
 import { Link } from 'react-router'
 import { connect } from "react-redux";
@@ -10,6 +11,7 @@ import {
     getEditingDatabaseWithTableMetadataStrengths,
     getEditingTable
 } from "../selectors";
+
 import * as metadataActions from "../datamodel";
 
 const mapDispatchToProps = {
@@ -27,10 +29,22 @@ const mapStateToProps = (state, props) => {
     }
 }
 
+type State = {
+    isShowingSchema: boolean,
+}
+
 @connect(mapStateToProps, mapDispatchToProps)
 class MetadataWrapperApp extends Component {
-    state = {
+    state: State = {
         isShowingSchema: false
+    }
+
+    componentWillMount () {
+        this.props.initializeMetadata(this.props.params.databasebId);
+    }
+
+    toogleShowSchema () {
+        this.setState({ isShowingSchema: !this.state.isShowingSchema })
     }
 
     render () {
@@ -51,7 +65,7 @@ class MetadataWrapperApp extends Component {
                         <Link
                             className="inline-block p2 text-bold"
                             activeClassName="text-brand"
-                            to="/admin/datamodel/database/metrics"
+                            to={`/admin/datamodel/database/${this.props.databaseId}/metrics`}
                         >
                             Metrics
                         </Link>
@@ -60,7 +74,7 @@ class MetadataWrapperApp extends Component {
                         <Link
                             className="inline-block p2 text-bold"
                             activeClassName="text-brand"
-                            to="/admin/datamodel/database"
+                            to={`/admin/datamodel/database/${this.props.databaseId}`}
                         >
                             Segments and tables
                         </Link>
@@ -69,7 +83,7 @@ class MetadataWrapperApp extends Component {
                         <Link
                             className="inline-block p2 text-bold"
                             activeClassName="text-brand"
-                            to="/admin/datamodel/database/dimensions"
+                            to={`/admin/datamodel/database/${this.props.databaseId}/dimensions`}
                         >
                             Dimensions
                         </Link>

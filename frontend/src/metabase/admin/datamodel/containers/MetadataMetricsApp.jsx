@@ -2,17 +2,29 @@ import React, { Component } from 'react'
 import { connect } from 'react-redux'
 import { Link } from 'react-router'
 
+import LoadingAndErrorWrapper from 'metabase/components/LoadingAndErrorWrapper'
 import Tooltip from 'metabase/components/Tooltip'
 import Icon from 'metabase/components/Icon'
 
-const mapStateToProps = state => ({
-})
+import insight from 'insightful'
 
-import LoadingAndErrorWrapper from 'metabase/components/LoadingAndErrorWrapper'
+const mapStateToProps = state => ({
+    metrics: [
+        { name: insight(), id: 1 },
+        { name: insight(), id: 2 },
+        { name: insight(), id: 3 },
+        { name: insight(), id: 4 },
+        { name: insight(), id: 5 },
+        { name: insight(), id: 6 },
+        { name: insight(), id: 7 },
+        { name: insight(), id: 8 },
+    ]
+})
 
 @connect(mapStateToProps)
 class MetadataMetricsApp extends Component {
     render () {
+        const { metrics } = this.props
         return (
             <div className="container">
                 <div className="flex py1">
@@ -20,9 +32,27 @@ class MetadataMetricsApp extends Component {
                         <Tooltip tooltip="Create a new metric"><Icon name="add" /></Tooltip>
                     </Link>
                 </div>
-                <div className="bordered border-dark rounded flex flex-full flex-column justify-center align-center full-height" style={{ minHeight: '60vh' }}>
-                    <h3>You haven't created any metrics for this database yet</h3>
-                </div>
+                <LoadingAndErrorWrapper loading={!metrics}>
+                    { () =>
+                        <ol className="full">
+                            { metrics.map(metric =>
+                                <li
+                                    className="py2 border-bottom"
+                                    key={metric.id}
+                                >
+                                    <h3>
+                                        <Link
+                                            className="text-brand"
+                                            to={`/admin/datamodel/metric/${metric.id}`}
+                                        >
+                                            {metric.name}
+                                        </Link>
+                                    </h3>
+                                </li>
+                            )}
+                        </ol>
+                    }
+                </LoadingAndErrorWrapper>
             </div>
         )
     }

@@ -63,11 +63,10 @@ export default class MetadataEditor extends Component {
 
     componentWillMount() {
         // if we know what database we are initialized with, include that
-        this.props.initializeMetadata(this.props.databaseId, this.props.tableId);
+        // this.props.initializeMetadata(this.props.databaseId, this.props.tableId);
     }
 
     toggleShowSchema() {
-        this.setState({ isShowingSchema: !this.state.isShowingSchema });
         MetabaseAnalytics.trackEvent("Data Model", "Show OG Schema", !this.state.isShowingSchema);
     }
 

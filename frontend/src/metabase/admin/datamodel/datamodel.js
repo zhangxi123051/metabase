@@ -37,6 +37,8 @@ export const initializeMetadata = createThunkAction(INITIALIZE_METADATA, functio
             dispatch(fetchDatabaseIdfields(database.id));
         }
 
+        dispatch(push(`/admin/datamodel/database/${database.id}/metrics`))
+
         return {
             databases,
             database,
@@ -71,7 +73,7 @@ export const selectDatabase = createThunkAction(SELECT_DATABASE, function(db) {
             dispatch(fetchDatabaseIdfields(db.id));
 
             // we also want to update our url to match our new state
-            dispatch(push('/admin/datamodel/database/'+db.id));
+            dispatch(push(`/admin/datamodel/database/${db.id}/metrics`));
 
             return database;
         } catch (error) {
