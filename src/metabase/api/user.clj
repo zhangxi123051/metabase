@@ -5,7 +5,6 @@
              [common :as api]
              [session :as session-api]]
             [metabase.email.messages :as email]
-            [metabase.integrations.ldap :as ldap]
             [metabase.models.user :as user :refer [User]]
             [metabase.util :as u]
             [metabase.util.schema :as su]
@@ -22,7 +21,7 @@
 (api/defendpoint GET "/"
   "Fetch a list of all active `Users` for the admin People page."
   []
-  (db/select [User :id :first_name :last_name :email :is_superuser :google_auth :ldap_auth :last_login], :is_active true))
+  (db/select [User :id :first_name :last_name :email :is_superuser :google_auth :last_login], :is_active true))
 
 (defn- reactivate-user! [existing-user first-name last-name]
   (when-not (:is_active existing-user)
@@ -33,9 +32,7 @@
       :is_superuser  false
       ;; if the user orignally logged in via Google Auth and it's no longer enabled, convert them into a regular user (see Issue #3323)
       :google_auth   (boolean (and (:google_auth existing-user)
-                                   (session-api/google-auth-client-id))) ; if google-auth-client-id is set it means Google Auth is enabled
-      :ldap_auth     (boolean (and (:ldap_auth existing-user)
-                                   (ldap/ldap-configured?)))))
+                                   (session-api/google-auth-client-id))))) ; if google-auth-client-id is set it means Google Auth is enabled
   ;; now return the existing user whether they were originally active or not
   (User (u/get-id existing-user)))
 

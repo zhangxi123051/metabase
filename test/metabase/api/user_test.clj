@@ -32,8 +32,7 @@
        :last_login   $
        :first_name   "Crowberto"
        :email        "crowberto@metabase.com"
-       :google_auth  false
-       :ldap_auth    false})
+       :google_auth  false})
     (match-$ (fetch-user :lucky)
       {:common_name  "Lucky Pigeon"
        :last_name    "Pigeon"
@@ -42,8 +41,7 @@
        :last_login   $
        :first_name   "Lucky"
        :email        "lucky@metabase.com"
-       :google_auth  false
-       :ldap_auth    false})
+       :google_auth  false})
     (match-$ (fetch-user :rasta)
       {:common_name  "Rasta Toucan"
        :last_name    "Toucan"
@@ -52,8 +50,7 @@
        :last_login   $
        :first_name   "Rasta"
        :email        "rasta@metabase.com"
-       :google_auth  false
-       :ldap_auth    false})}
+       :google_auth  false})}
   (do
     ;; Delete all the other random Users we've created so far
     (let [user-ids (set (map user->id [:crowberto :rasta :lucky :trashbird]))]
@@ -135,7 +132,6 @@
      :is_superuser false
      :is_qbnewb    true
      :google_auth  false
-     :ldap_auth    false
      :id           $})
   ((user->client :rasta) :get 200 "user/current"))
 
@@ -213,7 +209,7 @@
 ;; Test that a User can change their password (superuser and non-superuser)
 (defn- user-can-reset-password? [superuser?]
   (tt/with-temp User [user {:password "def", :is_superuser (boolean superuser?)}]
-    (let [creds           {:username (:email user), :password "def"}
+    (let [creds           {:email (:email user), :password "def"}
           hashed-password (db/select-one-field :password User, :email (:email user))]
       ;; use API to reset the users password
       (http/client creds :put 200 (format "user/%d/password" (:id user)) {:password     "abc123!!DEF"
@@ -251,7 +247,7 @@
                                  :last_name  (random-name)
                                  :email      "def@metabase.com"
                                  :password   "def123"}]
-    (let [creds {:username "def@metabase.com"
+    (let [creds {:email    "def@metabase.com"
                  :password "def123"}]
       [(metabase.http-client/client creds :put 200 (format "user/%d/qbnewb" id))
        (db/select-one-field :is_qbnewb User, :id id)])))
