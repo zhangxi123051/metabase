@@ -7,17 +7,13 @@ import type {
 
 export default ({ question, settings }: ClickActionProps): ClickAction[] => {
     // currently time series xrays require the maximum fidelity
-    if (
-        question.card().id &&
-        settings["enable_xrays"] &&
-        settings["xray_max_cost"] === "extended"
-    ) {
+    if (question.card().id && settings["enable_xrays"]) {
         return [
             {
                 name: "xray-card",
                 title: "X-ray this question",
                 icon: "beaker",
-                url: () => `/xray/card/${question.card().id}/extended`
+                url: () => `/xray/card/${question.card().id}/approximate`
             }
         ];
     } else {
