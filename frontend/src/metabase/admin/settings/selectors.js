@@ -12,6 +12,7 @@ import {
 } from "./components/widgets/PublicLinksListing.jsx";
 import SecretKeyWidget from "./components/widgets/SecretKeyWidget.jsx";
 import EmbeddingLegalese from "./components/widgets/EmbeddingLegalese";
+import EmbeddingWhiteLabel from "./components/widgets/EmbeddingWhiteLabel";
 import LdapGroupMappingsWidget from "./components/widgets/LdapGroupMappingsWidget";
 
 import { UtilApi } from "metabase/services";
@@ -314,6 +315,12 @@ const SECTIONS = [
                 display_name: "Enable Embedding Metabase in other Applications",
                 type: "boolean",
                 getHidden: (settings) => !settings["enable-embedding"]
+            },
+            {
+                key: "embedding-whitelabel-key",
+                display_name: "Whitelabel embedding",
+                getHidden: (settings) => !settings["enable-embedding"],
+                widget: EmbeddingWhiteLabel,
             },
             {
                 key: "embedding-secret-key",
