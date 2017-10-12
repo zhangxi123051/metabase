@@ -70,23 +70,29 @@
 
 .text-capitalize { text-transform: capitalize; }
 
-/* text weight */
-.text-light  { font-weight: 300; }
-.text-normal { font-weight: 400; }
-.text-bold, :local(.text-bold)   { font-weight: 700; }
+/* text weights */
+.text-light          { font-weight: 300; }
+.text-normal         { font-weight: 400; }
+
+.text-bold,
+:local(.text-bold)   { font-weight: 700; }
+
+.text-black          { font-weight: 900; }
 
 /* text style */
 
 .text-italic { font-style: italic; }
 
 /* larger text size used for descriptions  */
-.text-body, :local(.text-body) {
+.text-body,
+:local(.text-body) {
   font-size: 1.286em;
   line-height: 1.457em;
   color: var(--body-text-color); /* TODO - is this bad? */
 }
 
-.text-paragraph, :local(.text-paragraph) {
+.text-paragraph,
+:local(.text-paragraph) {
   font-size: 1.143em;
   line-height: 1.5em;
 }
