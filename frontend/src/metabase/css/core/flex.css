@@ -43,6 +43,10 @@
     align-items: center;
 }
 
+.align-start {
+  align-items: flex-start;
+}
+
 .align-baseline, :local(.align-baseline) {
     align-items: baseline;
 }
