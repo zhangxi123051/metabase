@@ -4,6 +4,10 @@
     display: flex;
 }
 
+@media screen and (--breakpoint-min-md) {
+  .md-flex { display: flex; }
+}
+
 .flex-full, :local(.flex-full) {
     flex: 1;
 }

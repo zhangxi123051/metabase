@@ -10,7 +10,7 @@ const COLLECTION_ICON_SIZE = 64;
 const COLLECTION_BOX_CLASSES = "relative block p4 hover-parent hover--visibility cursor-pointer text-centered transition-background";
 
 const CollectionButtons = ({ collections, isAdmin, push }) =>
-    <ol className="Grid Grid--gutters Grid--fit small-Grid--1of3 md-Grid--1of4 large-Grid--guttersLg">
+    <ol className="md-Grid Grid--gutters Grid--fit small-Grid--1of3 md-Grid--1of4 large-Grid--guttersLg">
         { collections
             .map(collection => <CollectionButton {...collection} push={push} isAdmin={isAdmin} />)
             .concat(isAdmin ? [<NewCollectionButton push={push} />] : [])
@@ -23,10 +23,9 @@ const CollectionButtons = ({ collections, isAdmin, push }) =>
     </ol>
 
 class CollectionButton extends Component {
-    constructor() {
-        super();
-        this.state = { hovered: false };
-    }
+    state = {
+        hovered: false
+    };
 
     render () {
         const { id, name, color, slug, isAdmin } = this.props;
@@ -45,7 +44,7 @@ class CollectionButton extends Component {
                     }}
                 >
                     { isAdmin &&
-                        <div className="absolute top right mt2 mr2 hover-child">
+                        <div className="absolute top right mt2 mr2 hover-child hide md-show">
                             <Link to={"/collections/permissions?collectionId=" + id} className="mr1">
                                 <Icon name="lockoutline" tooltip="Set collection permissions" />
                             </Link>
@@ -67,7 +66,7 @@ class CollectionButton extends Component {
 
 const NewCollectionButton = ({ push }) =>
     <div
-        className={cx(COLLECTION_BOX_CLASSES, 'bg-brand-hover', 'text-brand', 'text-white-hover', 'bg-grey-0')}
+        className={cx(COLLECTION_BOX_CLASSES, 'hide', 'md-show', 'bg-brand-hover', 'text-brand', 'text-white-hover', 'bg-grey-0')}
         style={{
             borderRadius: 10
         }}

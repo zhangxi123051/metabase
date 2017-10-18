@@ -62,15 +62,15 @@ export const QuestionIndexHeader = ({questions, collections, isAdmin, onSearch})
         <div className="flex align-center pt4 pb2">
 
           { showSearch && hasCollections &&
-          <ExpandingSearchField onSearch={onSearch}/>
+              <ExpandingSearchField onSearch={onSearch}/>
           }
 
-        <div className="flex align-center ml-auto">
+        <div className="flex align-center ml-auto hide md-show">
             <CollectionActions>
                 { showSetPermissionsLink &&
-                <Link to="/collections/permissions">
-                    <Icon size={18} name="lock" tooltip="Set permissions for collections"/>
-                </Link>
+                    <Link to="/collections/permissions">
+                        <Icon size={18} name="lock" tooltip="Set permissions for collections"/>
+                    </Link>
                 }
                 <Link to="/questions/archive">
                     <Icon size={20} name="viewArchive" tooltip="View the archive"/>
@@ -131,7 +131,7 @@ export class QuestionIndex extends Component {
 
                 { showNoSavedQuestionsState && <NoSavedQuestionsState /> }
 
-                <div className={cx("pt4", { "hide": !showEntityList })}>
+                <div className={cx("md-pt4", { "hide": !showEntityList })}>
                     {/* EntityList loads `questions` according to the query specified in the url query string */}
                     <EntityList
                         entityType="cards"

@@ -1,49 +1,83 @@
-/* eslint "react/prop-types": "warn" */
+/* @flow */
 import React from "react";
-import PropTypes from "prop-types";
 import { Link } from "react-router";
 import cx from "classnames";
 import pure from "recompose/pure";
 
-import S from "./List.css";
+import CheckBox from "metabase/components/CheckBox";
+import Icon from "metabase/components/Icon";
+import ModalWithTrigger from "metabase/components/ModalWithTrigger";
+import Tooltip from "metabase/components/Tooltip";
 
-import Icon from "metabase/components/Icon.jsx";
-import CheckBox from "metabase/components/CheckBox.jsx";
-import Tooltip from "metabase/components/Tooltip.jsx";
-import ModalWithTrigger from "metabase/components/ModalWithTrigger.jsx";
-import MoveToCollection from "../containers/MoveToCollection.jsx";
-import Labels from "./Labels.jsx";
-import CollectionBadge from "./CollectionBadge.jsx";
+import CollectionBadge from "./CollectionBadge";
+import Labels from "./Labels";
+import MoveToCollection from "../containers/MoveToCollection";
 
 import * as Urls from "metabase/lib/urls";
 
 const ITEM_ICON_SIZE = 20;
 
+type ItemProps = {
+    entity: {},
+    id: number,
+    name: string,
+    created: string,
+    description: string,
+    by: string,
+    labels: [],
+    collection: {},
+    selected: bool,
+    favorite: bool,
+    archived: bool,
+    icon: string,
+    setItemSelected: () => void,
+    setFavorited: () => void,
+    setArchived: () => void,
+    onEntityClick: () => void,
+    showCollectionName: () => void,
+};
+
 const Item = ({
     entity,
-    id, name, description, labels, created, by, favorite, collection, archived,
-    icon, selected, setItemSelected, setFavorited, setArchived, showCollectionName,
+    id,
+    name,
+    description,
+    labels,
+    created,
+    by,
+    favorite,
+    collection,
+    archived,
+    icon,
+    selected,
+    setItemSelected,
+    setFavorited,
+    setArchived,
+    showCollectionName,
     onEntityClick
-}) =>
-    <div className={cx('hover-parent hover--visibility', S.item)}>
-        <div className="flex flex-full align-center">
-            <div className="relative flex ml1 mr2" style={{ width: ITEM_ICON_SIZE, height: ITEM_ICON_SIZE }}>
+}: ItemProps) =>
+    <div className="hover-parent hover--visibility mb2 md-mb0">
+        <div className="md-flex flex-full align-center">
+            <div className="relative md-flex" style={{ width: ITEM_ICON_SIZE, height: ITEM_ICON_SIZE }}>
                 { icon &&
                     <Icon
-                        className={cx("text-light-blue absolute top left visible", { "hover-child--hidden": !!setItemSelected })}
+                        className={cx(
+                            "text-light-blue absolute top left visible",
+                            { "hover-child--hidden": !!setItemSelected }
+                        )}
                         name={icon}
                         size={ITEM_ICON_SIZE}
                     />
                 }
                 { setItemSelected &&
                     <span className={cx(
-                        "absolute top left",
+                        "absolute top left hide md-show",
                         { "visible": selected },
                         { "hover-child": !selected }
                     )}>
                         <CheckBox
                             checked={selected}
-                            onChange={e => setItemSelected({ [id]: e.target.checked })}
+                            onChange={({ target }) => setItemSelected({ [id]: target.checked })}
                             size={ITEM_ICON_SIZE}
                             padding={3}
                         />
@@ -62,13 +96,13 @@ const Item = ({
                 onEntityClick={onEntityClick}
             />
         </div>
-        <div className="flex flex-column ml-auto">
+        <div className="md-flex flex-column ml-auto">
             <ItemCreated
                 by={by}
                 created={created}
             />
             { setArchived &&
-                <div className="hover-child mt1 ml-auto">
+                <div className="hover-child hide md-show mt1 ml-auto">
                     <ModalWithTrigger
                         full
                         triggerElement={
@@ -99,31 +133,33 @@ const Item = ({
         </div>
     </div>
 
-Item.propTypes = {
-    entity:             PropTypes.object.isRequired,
-    id:                 PropTypes.number.isRequired,
-    name:               PropTypes.string.isRequired,
-    created:            PropTypes.string.isRequired,
-    description:        PropTypes.string,
-    by:                 PropTypes.string.isRequired,
-    labels:             PropTypes.array.isRequired,
-    collection:         PropTypes.object,
-    selected:           PropTypes.bool.isRequired,
-    favorite:           PropTypes.bool.isRequired,
-    archived:           PropTypes.bool.isRequired,
-    icon:               PropTypes.string.isRequired,
-    setItemSelected:    PropTypes.func,
-    setFavorited:       PropTypes.func,
-    setArchived:        PropTypes.func,
-    onEntityClick:      PropTypes.func,
-    showCollectionName: PropTypes.bool,
-};
+type ItemBodyProps = {
+    entity: {},
+    description: string,
+    favorite: bool,
+    id: number,
+    name: string,
+    setFavorited: () => void,
+    labels: [],
+    collection: {},
+    onEntityClick: () => void
+}
 
-const ItemBody = pure(({ entity, id, name, description, labels, favorite, collection, setFavorited, onEntityClick }) =>
-    <div className={S.itemBody}>
-        <div className={cx('flex', S.itemTitle)}>
-            <Link to={Urls.question(id)} className={cx(S.itemName)} onClick={onEntityClick && ((e) => { e.preventDefault(); onEntityClick(entity); })}>
-                {name}
+const ItemBody = pure(({
+    entity,
+    id,
+    name,
+    description,
+    labels,
+    favorite,
+    collection,
+    setFavorited,
+    onEntityClick
+}: ItemBodyProps) =>
+    <div>
+        <div className="md-flex">
+            <Link to={Urls.question(id)} onClick={onEntityClick && ((e) => { e.preventDefault(); onEntityClick(entity); })}>
+                <h2>{name}</h2>
             </Link>
             { collection &&
                 <CollectionBadge collection={collection} />
@@ -132,7 +168,7 @@ const ItemBody = pure(({ entity, id, name, description, labels, favorite, collec
                 <Tooltip tooltip={favorite ? "Unfavorite" : "Favorite"}>
                     <Icon
                         className={cx(
-                            "flex cursor-pointer",
+                            "md-flex cursor-pointer hide md-show",
                             {"hover-child text-light-blue text-brand-hover": !favorite},
                             {"visible text-gold": favorite}
                         )}
@@ -150,26 +186,18 @@ const ItemBody = pure(({ entity, id, name, description, labels, favorite, collec
     </div>
 );
 
-ItemBody.propTypes = {
-    description:        PropTypes.string,
-    favorite:           PropTypes.bool.isRequired,
-    id:                 PropTypes.number.isRequired,
-    name:               PropTypes.string.isRequired,
-    setFavorited:       PropTypes.func,
-};
+type ItemCreatedProps = {
+    created: string,
+    by: string
+}
 
-const ItemCreated = pure(({ created, by }) =>
+const ItemCreated = pure(({ created, by }: ItemCreatedProps) =>
     (created || by) ?
-        <div className={S.itemSubtitle}>
+        <div>
             {"Created" + (created ? ` ${created}` : ``) + (by ? ` by ${by}` : ``)}
         </div>
     :
         null
 );
-
-ItemCreated.propTypes = {
-    created:            PropTypes.string.isRequired,
-    by:                 PropTypes.string.isRequired,
-};
 
 export default pure(Item);
