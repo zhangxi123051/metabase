@@ -2,7 +2,6 @@
 import React, { Component } from 'react'
 import cxs from 'cxs'
 
-import Card from 'metabase/components/Card'
 import Icon from 'metabase/components/Icon'
 import Tooltip from 'metabase/components/Tooltip'
 
