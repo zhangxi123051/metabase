@@ -8,11 +8,15 @@ import Tooltip from 'metabase/components/Tooltip'
 
 const genClasses = (props) => cxs({
     width: !props.autoSize && '22em',
+    height: '10em',
     ' .Icon': {
         color: '#93a1ab'
     },
     ' header span': {
         fontSize: '0.85em',
+    },
+    ' p': {
+        lineHeight: '1.4em'
     }
 
 })
@@ -32,7 +36,6 @@ type Props = {
 
 const termIconLookup = {
     'seasonality': 'sun',
-    'stationary': 'turtle'
 }
 
 class InsightCard extends Component {
@@ -69,15 +72,13 @@ class InsightCard extends Component {
         const { title, term } = this.props
         return (
             <div className={genClasses(this.props)}>
-                <Card>
-                    <div className="p3">
-                        <header className="flex align-center">
-                            <Icon name={termIconLookup[term] || 'insight'} size={24} className="mr1" />
-                            <span className="text-bold text-uppercase">{title}</span>
-                        </header>
-                        { this.renderTextWithAnnotation() }
-                    </div>
-                </Card>
+                <div className="bordered rounded shadowed full-height p3">
+                    <header className="flex align-center">
+                        <Icon name={termIconLookup[term] || 'insight'} size={24} className="mr1" />
+                        <span className="text-bold text-uppercase">{title}</span>
+                    </header>
+                    { this.renderTextWithAnnotation() }
+                </div>
             </div>
         )
     }
