@@ -3966,3 +3966,36 @@ databaseChangeLog:
             tableName: pulse
             columnName: name
             columnDataType: varchar(254)
+  - changeSet:
+      id: 70
+      author: camsaul
+      comment: 'Added 0.27.0'
+      changes:
+        - createTable:
+            tableName: instance
+            remarks: 'Used to keep track of Metabase instances connected to this DB, to coordinate things like background tasks.'
+            columns:
+              - column:
+                  name: name
+                  type: varchar(254)
+                  remarks: 'The randomly-generated name of this instance, picked at startup.'
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: last_seen
+                  type: datetime
+                  remarks: 'The last time this instance checked in and announced it is still alive.'
+                  constraints:
+                    nullable: false
+              - column:
+                  name: does_background_tasks
+                  type: boolean
+                  remarks: 'Whether this instance is in charge of doing various background tasks like sending Pulses. Only one instance at a time should be doing this.'
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_updated_settings
+                  type: datetime
+                  remarks: 'The last time this instance updated the Settings table. Used so other instances know when to clear their cache.'
