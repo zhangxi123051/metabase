@@ -1,13 +1,15 @@
 (ns metabase.models.field
   (:require [clojure.core.memoize :as memoize]
             [clojure.string :as s]
+            [metabase
+             [mbql :as mbql]
+             [util :as u]]
             [metabase.models
              [dimension :refer [Dimension]]
              [field-values :as fv :refer [FieldValues]]
              [humanization :as humanization]
              [interface :as i]
              [permissions :as perms]]
-            [metabase.util :as u]
             [toucan
              [db :as db]
              [models :as models]]))
@@ -27,6 +29,13 @@
 ;;; ------------------------------------------------------------ Entity & Lifecycle ------------------------------------------------------------
 
 (models/defmodel Field :metabase_field)
+
+(extend-type FieldInstance
+  mbql/MBQL
+  (mbql/->mbql [{id :id, field-name :name}] (list 'field id field-name))
+
+  mbql/Field
+  (mbql/->Field [this] this))
 
 (defn- check-valid-types [{base-type :base_type, special-type :special_type}]
   (when base-type
