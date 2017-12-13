@@ -5,6 +5,9 @@
             [metabase
              [driver :as driver]
              [util :as u]]
+            [metabase.mbql
+             [parse :as parse]
+             [resolve :as resolve2]]
             [metabase.models
              [query :as query]
              [query-execution :as query-execution :refer [QueryExecution]]]
@@ -20,7 +23,7 @@
              [cumulative-aggregations :as cumulative-ags]
              [dev :as dev]
              [driver-specific :as driver-specific]
-             [expand :as expand]
+             #_[expand :as expand]
              [expand-macros :as expand-macros]
              [fetch-source-query :as fetch-source-query]
              [format-rows :as format-rows]
@@ -31,8 +34,8 @@
              [permissions :as perms]
              [results-metadata :as results-metadata]
              [resolve-driver :as resolve-driver]
-             [resolve :as resolve]
-             [source-table :as source-table]]
+             #_[resolve :as resolve]
+             #_[source-table :as source-table]]
             [metabase.query-processor.util :as qputil]
             [metabase.util.schema :as su]
             [schema.core :as s]
@@ -49,6 +52,22 @@
   [query]
   {:pre [(map? query) (:driver query)]}
   (driver/execute-query (:driver query) query))
+
+(defn- parse [qp]
+  (comp
+   qp
+   (fn [query]
+     (if (qputil/mbql-query? query)
+       (update query :query parse/parse query)
+       query))))
+
+(defn- resolve [qp]
+  (comp
+   qp
+   (fn [query]
+     (if (qputil/mbql-query? query)
+       (update query :query resolve2/resolve)
+       query))))
 
 ;; The way these functions are applied is actually straight-forward; it matches the middleware pattern used by
 ;; Compojure.
@@ -95,7 +114,6 @@
       format-rows/format-rows
       binning/update-binning-strategy
       results-metadata/record-and-return-metadata!
-      resolve/resolve-middleware
       add-dim/add-remapping
       implicit-clauses/add-implicit-clauses
       source-table/resolve-source-table-middleware
@@ -105,9 +123,11 @@
       expand-macros/expand-macros
       driver-specific/process-query-in-context         ; (drivers can inject custom middleware if they implement IDriver's `process-query-in-context`)
       add-settings/add-settings
-      resolve-driver/resolve-driver                    ; ▲▲▲ DRIVER RESOLUTION POINT ▲▲▲ All functions *above* will have access to the driver during PRE- *and* POST-PROCESSING
+      resolve-driver/resolve-driver
       fetch-source-query/fetch-source-query
       log-query/log-initial-query
+      resolve                                          ; ▲▲▲ DRIVER RESOLUTION POINT ▲▲▲ All functions *above* will have access to the driver during PRE- *and* POST-PROCESSING
+      parse
       cache/maybe-return-cached-results
       log-query/log-results-metadata
       catch-exceptions/catch-exceptions))

@@ -15,11 +15,15 @@
 (defn- resolve-driver [query]
   (assoc query :driver (driver/engine->driver (get-in query [:database :engine]))))
 
-(defn- parse-inner-query [query]
-  (update query :query (comp resolve/resolve parse/parse)))
+(defn- parse-query [query]
+  (update query :query parse/parse))
+
+(defn- resolve-query [query]
+  (println "Parsed query:" (u/pprint-to-str 'cyan (:query query))) ; NOCOMMIT
+  (update query :query resolve/resolve))
 
 (defn- convert-to-native-query [query]
-  (println "Parsed/Resolved query:" (u/pprint-to-str 'cyan (:query query))) ; NOCOMMIT
+  (println "Resolved query:" (u/pprint-to-str 'yellow (:query query))) ; NOCOMMIT
   (assoc query :native (driver/mbql->native (:driver query) query)))
 
 (defn- run-query [query]
@@ -27,10 +31,12 @@
   (driver/execute-query (:driver query) query))
 
 (defn- process-query [query]
+  ;; TODO - catch exceptions
   (-> query
       resolve-database
       resolve-driver
-      parse-inner-query
+      parse-query
+      resolve-query
       convert-to-native-query
       run-query))
 
