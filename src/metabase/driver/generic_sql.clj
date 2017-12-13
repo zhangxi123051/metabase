@@ -102,12 +102,6 @@
   functions like `prepare-value` are used for similar purposes; at some point in the future, we might be able to
   combine them into a single method used in both places.")
 
-  (prepare-value [this, ^Value value]
-    "*OPTIONAL*. Prepare a value (e.g. a `String` or `Integer`) that will be used in a HoneySQL form. By default, this
-     returns VALUE's `:value` as-is, which is eventually passed as a parameter in a prepared statement. Drivers such
-     as BigQuery that don't support prepared statements can skip this behavior by returning a HoneySQL `raw` form
-     instead, or other drivers can perform custom type conversion as appropriate.")
-
   (quote-style ^clojure.lang.Keyword [this]
     "*OPTIONAL*. Return the quoting style that should be used by [HoneySQL](https://github.com/jkk/honeysql) when
      building a SQL statement. Defaults to `:ansi`, but other valid options are `:mysql`, `:sqlserver`, `:oracle`, and

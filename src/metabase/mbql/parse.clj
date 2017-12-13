@@ -9,7 +9,7 @@
             [schema.core :as s])
   (:import [metabase.mbql
             ;; fields & values
-            RelativeDatetime
+            AbsoluteDatetime RelativeDatetime
             ;; aggregations
             AverageAggregation CountAggregation CumulativeCountAggregation CumulativeSumAggregation
             DistinctCountAggregation StandardDeviationAggregation MinimumAggregation MaximumAggregation
@@ -40,9 +40,10 @@
   [id :- mbql/Field?]
   (mbql/->Field id))
 
-(s/defn ^:mbql absolute-datetime :- java.sql.Timestamp
-  [x :- mbql/AbsoluteDatetime?]
-  (u/->Timestamp x))
+(s/defn ^:mbql absolute-datetime :- AbsoluteDatetime
+  [x    :- mbql/AbsoluteDatetime?
+   unit :- mbql/DatetimeValueUnit]
+  (mbql/strict-map->AbsoluteDatetime {:timestamp (u/->Timestamp x), :unit (qputil/normalize-token unit)}))
 
 (s/defn ^:mbql datetime-field :- mbql/DatetimeField?
   [field :- mbql/Field?
@@ -176,14 +177,15 @@
 
 
 (defn- parse-value-for-field [field x]
-  (let [field-is-datetime-field? (nil? (s/check mbql/DatetimeField? field))
+  (let [field-is-datetime-field? (core/and (nil? (s/check mbql/DatetimeField? field))
+                                           (nil? (s/check mbql/DatetimeValueUnit (:unit field))))
         x-is-datetime-field?     (nil? (s/check mbql/DatetimeField? x))]
     (if (core/or (core/not field-is-datetime-field?)
                  x-is-datetime-field?)
       ;; if field isn't a datetime field, or both field and x are, leave x as-is
       x
       ;; otherwise if field is a datetime field coerce x to an absolute datetime
-      (absolute-datetime x))))
+      (absolute-datetime x (:unit field)))))
 
 (s/defn ^:mbql = :- (s/cond-pre EqualsFilter OrFilter)
   ([field :- mbql/Field?

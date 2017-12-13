@@ -58,16 +58,30 @@
    qp
    (fn [query]
      (if (qputil/mbql-query? query)
-       (update query :query parse/parse query)
+       (update query :query parse/parse)
        query))))
 
-(defn- resolve [qp]
+(defn- resolves [qp]
   (comp
    qp
    (fn [query]
      (if (qputil/mbql-query? query)
        (update query :query resolve2/resolve)
        query))))
+
+(defn- resolve-db [qp]
+  (comp
+   qp
+   (fn [query]
+     (update query :database (comp metabase.models.database/Database u/get-id)))))
+
+(defn- what-have-we? [qp msg color]
+  (comp
+   qp
+   (fn [query]
+     (println msg (u/pprint-to-str color (update query :database #(select-keys % [:id :name :engine]))))
+     query
+     )))
 
 ;; The way these functions are applied is actually straight-forward; it matches the middleware pattern used by
 ;; Compojure.
@@ -104,9 +118,10 @@
   ;; ▼▼▼ POST-PROCESSING ▼▼▼  happens from TOP-TO-BOTTOM, e.g. the results of `f` are (eventually) passed to `limit`
   (-> f
       dev/guard-multiple-calls
-      mbql-to-native/mbql->native                      ; ▲▲▲ NATIVE-ONLY POINT ▲▲▲ Query converted from MBQL to native here; all functions *above* will only see the native query
+      mbql-to-native/mbql->native
       annotate-and-sort/annotate-and-sort
       perms/check-query-permissions
+      ;; TODO - since there's no such thing as an "expanded" query anymore rename this fn
       log-query/log-expanded-query
       dev/check-results-format
       limit/limit
@@ -116,22 +131,26 @@
       results-metadata/record-and-return-metadata!
       add-dim/add-remapping
       implicit-clauses/add-implicit-clauses
-      source-table/resolve-source-table-middleware
-      expand/expand-middleware                         ; ▲▲▲ QUERY EXPANSION POINT  ▲▲▲ All functions *above* will see EXPANDED query during PRE-PROCESSING
-      row-count-and-status/add-row-count-and-status    ; ▼▼▼ RESULTS WRAPPING POINT ▼▼▼ All functions *below* will see results WRAPPED in `:data` during POST-PROCESSING
+      #_source-table/resolve-source-table-middleware
+      #_expand/expand-middleware
+      ;; ▼▼▼ RESULTS WRAPPING POINT ▼▼▼ All functions *below* will see results WRAPPED in `:data` during POST-PROCESSING
+      row-count-and-status/add-row-count-and-status
       parameters/substitute-parameters
       expand-macros/expand-macros
-      driver-specific/process-query-in-context         ; (drivers can inject custom middleware if they implement IDriver's `process-query-in-context`)
+      driver-specific/process-query-in-context
       add-settings/add-settings
-      resolve-driver/resolve-driver
+      (what-have-we? "here" 'yellow)
       fetch-source-query/fetch-source-query
       log-query/log-initial-query
-      resolve                                          ; ▲▲▲ DRIVER RESOLUTION POINT ▲▲▲ All functions *above* will have access to the driver during PRE- *and* POST-PROCESSING
+      resolves
       parse
+      resolve-driver/resolve-driver
+      ;; ▲▲▲ DRIVER RESOLUTION POINT ▲▲▲ All functions *above* will have access to the driver
+      resolve-db
       cache/maybe-return-cached-results
       log-query/log-results-metadata
       catch-exceptions/catch-exceptions))
-;; ▲▲▲ PRE-PROCESSING ▲▲▲ happens from BOTTOM-TO-TOP, e.g. the results of `expand-macros` are (eventually) passed to `expand-resolve`
+;; ▲▲▲ PRE-PROCESSING ▲▲▲ happens from BOTTOM-TO-TOP ▲▲▲
 
 (defn query->native
   "Return the native form for QUERY (e.g. for a MBQL query on Postgres this would return a map containing the compiled
@@ -148,6 +167,10 @@
   {:style/indent 0}
   [query]
   ((qp-pipeline execute-query) query))
+
+;; NOCOMMIT
+(defn- x []
+  (process-query {:database 1, :type :query, :query {:source-table 1, :limit 2, :filter [:= 30 "Gizmo"]}}))
 
 (def ^{:arglists '([query])} expand
   "Expand a QUERY the same way it would normally be done as part of query processing.

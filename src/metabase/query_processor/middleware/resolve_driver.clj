@@ -7,8 +7,8 @@
   "Middleware that resolves the driver associated with a query, binds it to `*driver*`, and associates it in the query
   under the key `:driver`."
   [qp]
-  (fn [query]
-    (let [driver (or (driver/database-id->driver (:database query))
+  (fn [{:keys [database], :as query}]
+    (let [driver (or (driver/engine->driver (:engine database))
                      (throw (Exception. "Unable to resolve driver for query.")))
           query  (assoc query :driver driver)]
       (binding [i/*driver* driver]

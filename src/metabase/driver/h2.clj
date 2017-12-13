@@ -7,11 +7,9 @@
              [util :as u]]
             [metabase.db.spec :as dbspec]
             [metabase.driver.generic-sql :as sql]
-            [metabase.models.database :refer [Database]]
-            [metabase.util.honeysql-extensions :as hx]
-            [toucan.db :as db]))
+            [metabase.util.honeysql-extensions :as hx]))
 
-(def ^:private ^:const column->base-type
+(def ^:private column->base-type
   {:ARRAY                       :type/*
    :BIGINT                      :type/BigInteger
    :BINARY                      :type/*
@@ -120,13 +118,13 @@
              (hsql/raw "timestamp '1970-01-01T00:00:00Z'")))
 
 
-(defn- check-native-query-not-using-default-user [{query-type :type, database-id :database, :as query}]
-  {:pre [(integer? database-id)]}
+(defn- check-native-query-not-using-default-user [{query-type :type, database :database, :as query}]
   (u/prog1 query
-    ;; For :native queries check to make sure the DB in question has a (non-default) NAME property specified in the connection string.
-    ;; We don't allow SQL execution on H2 databases for the default admin account for security reasons
+    ;; For :native queries check to make sure the DB in question has a (non-default) NAME property specified in the
+    ;; connection string. We don't allow SQL execution on H2 databases for the default admin account for security
+    ;; reasons
     (when (= (keyword query-type) :native)
-      (let [{:keys [db]}   (db/select-one-field :details Database :id database-id)
+      (let [{:keys [db]}   (:details database)
             _              (assert db)
             [_ options]    (connection-string->file+options db)
             {:strs [USER]} options]

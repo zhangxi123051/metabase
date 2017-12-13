@@ -3,7 +3,8 @@
   (:require [metabase.query-processor.util :as qputil]
             [metabase.util :as u]
             [metabase.util.schema :as su]
-            [schema.core :as s]))
+            [schema.core :as s])
+  (:import java.sql.Timestamp))
 
 (defn normalized-enum [& tokens]
   (let [tokens (set (map qputil/normalize-token tokens))]
@@ -81,13 +82,9 @@
   "Schema for datetime units that are valid for `DatetimeField` forms."
   (s/named (apply normalized-enum datetime-field-units) "Valid datetime unit for a field"))
 
-(def RelativeDatetimeUnit
+(def DatetimeValueUnit
   "Schema for datetime units that valid for relative datetime values."
   (s/named (apply normalized-enum relative-datetime-value-units) "Valid datetime unit for a relative datetime"))
-
-
-(def AbsoluteDatetime? (s/pred (partial satisfies? u/ITimestampCoercible)
-                               "Is something that can be coerced to a Timestamp?"))
 
 
 (defprotocol Datetime
@@ -95,9 +92,20 @@
 
 (def Datetime? (s/pred (partial satisfies? Datetime) "Is a Datetime?"))
 
+(s/defrecord AbsoluteDatetime [timestamp :- Timestamp
+                               unit      :- DatetimeValueUnit]
+  MBQL
+  (->mbql [_] (list 'absolute-datetime timestamp unit))
+  Datetime
+  (unit [_] unit))
+
+(def AbsoluteDatetime? (s/pred (partial satisfies? u/ITimestampCoercible)
+                               "Is something that can be coerced to a Timestamp?"))
+
+
 
 (s/defrecord RelativeDatetime [amount :- s/Int
-                               unit   :- RelativeDatetimeUnit]
+                               unit   :- DatetimeValueUnit]
   MBQL
   (->mbql [_] (list 'relative-datetime amount unit))
   Datetime
@@ -142,12 +150,12 @@
 
 (def Orderable?
   (s/named
-   (s/cond-pre s/Num AbsoluteDatetime? Field?)
+   (s/cond-pre s/Num AbsoluteDatetime AbsoluteDatetime? Field?)
    "Something that can be sorted. A Field, number, or absoulte datetime."))
 
 (def Comparable?
   (s/named
-   (s/maybe (s/cond-pre s/Num s/Bool s/Str AbsoluteDatetime? Field?))
+   (s/maybe (s/cond-pre s/Num s/Bool s/Str AbsoluteDatetime AbsoluteDatetime? Field?))
    "Something that can be compared for equality. A Field, nil, number, string, boolean, or absoute datetime."))
 
 
