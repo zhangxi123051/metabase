@@ -5,17 +5,19 @@
             [honeysql.core :as hsql]
             [metabase
              [driver :as driver]
+             [query-processor :as qp]
              [query-processor-test :refer [rows]]
              [sync :as sync]
              [util :as u]]
             [metabase.driver
              [generic-sql :as sql]
              [postgres :as postgres]]
+            [metabase.driver.generic-sql.query-processor :as sqlqp]
             [metabase.models
              [database :refer [Database]]
              [field :refer [Field]]
              [table :refer [Table]]]
-            [metabase.query-processor :as qp]
+            [metabase.query-processor.interface :as qpi]
             [metabase.query-processor.middleware.expand :as ql]
             [metabase.sync.sync-metadata :as sync-metadata]
             [metabase.test
@@ -374,11 +376,11 @@
                   (db/select [Field :name :database_type :base_type] :table_id table-id)))))))
 
 
-;; check that values for enum types get wrapped in appropriate CAST() fn calls in prepare-value
+;; check that values for enum types get wrapped in appropriate CAST() fn calls in `->honeysql`
 (expect-with-engine :postgres
   {:name :cast, :args ["toucan" (keyword "bird type")]}
-  (#'postgres/prepare-value {:field {:database-type "bird type", :base-type :type/PostgresEnum}
-                             :value "toucan"}))
+  (sqlqp/->honeysql pg-driver (qpi/map->Value {:field {:database-type "bird type", :base-type :type/PostgresEnum}
+                                               :value "toucan"})))
 
 ;; End-to-end check: make sure everything works as expected when we run an actual query
 (expect-with-engine :postgres
