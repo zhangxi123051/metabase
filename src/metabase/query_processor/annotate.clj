@@ -122,7 +122,10 @@
   {:post [(keyword? (:field-name %))]}
   (assoc field :field-name (keyword (str/join \. (rest (i/qualified-name-components field))))))
 
-(defn aggregation-name
+;; NOCOMMIT
+(def aggregation-name (constantly "count"))
+
+#_(defn aggregation-name
   "Return an appropriate field *and* display name for an `:aggregation` subclause (an aggregation or expression)."
   ^String [{custom-name :custom-name, aggregation-type :aggregation-type, :as ag}]
   (when-not i/*driver*

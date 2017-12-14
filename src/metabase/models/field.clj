@@ -1,13 +1,15 @@
 (ns metabase.models.field
   (:require [clojure.core.memoize :as memoize]
             [clojure.string :as s]
+            [metabase
+             [mbql :as mbql]
+             [util :as u]]
             [metabase.models
              [dimension :refer [Dimension]]
              [field-values :as fv :refer [FieldValues]]
              [humanization :as humanization]
              [interface :as i]
              [permissions :as perms]]
-            [metabase.util :as u]
             [toucan
              [db :as db]
              [models :as models]]))
@@ -27,6 +29,21 @@
 ;;; ------------------------------------------------------------ Entity & Lifecycle ------------------------------------------------------------
 
 (models/defmodel Field :metabase_field)
+
+(defn- mbql-name [{:keys [parent id], {table-name :name, schema :schema} :table, field-name :name}]
+  (cond
+    parent      (str (mbql-name parent) \. field-name)
+    schema      (str schema \. table-name \. field-name)
+    table-name  (str table-name \. field-name)
+    :else       field-name))
+
+(extend-type FieldInstance
+  mbql/MBQL
+  (mbql/->mbql [{:keys [id], :as this}]
+    (list 'field id (mbql-name this)))
+
+  mbql/Field
+  (mbql/->Field [this] this))
 
 (defn- check-valid-types [{base-type :base_type, special-type :special_type}]
   (when base-type
@@ -175,19 +192,18 @@
 
 (defn qualified-name-components
   "Return the pieces that represent a path to FIELD, of the form `[table-name parent-fields-name* field-name]`."
-  [{field-name :name, table-id :table_id, parent-id :parent_id}]
-  (conj (vec (if-let [parent (Field parent-id)]
-               (qualified-name-components parent)
-               (let [{table-name :name, schema :schema} (db/select-one ['Table :name :schema], :id table-id)]
-                 (conj (when schema
-                         [schema])
-                       table-name))))
+  [{field-name :name, table-id :table_id, parent-id :parent_id, parent :parent, table :table}]
+  (conj (vec
+         (if-let [parent (or parent
+                             (when parent-id (Field parent-id)))]
+           (qualified-name-components parent)
+           (let [{table-name :name, schema :schema} (or table
+                                                        (when table-id
+                                                          (db/select-one ['Table :name :schema], :id table-id)))]
+             (conj (when schema
+                     [schema])
+                   table-name))))
         field-name))
-
-(defn qualified-name
-  "Return a combined qualified name for FIELD, e.g. `table_name.parent_field_name.field_name`."
-  [field]
-  (s/join \. (qualified-name-components field)))
 
 (defn table
   "Return the `Table` associated with this `Field`."

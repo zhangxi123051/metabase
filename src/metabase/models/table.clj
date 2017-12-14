@@ -1,6 +1,7 @@
 (ns metabase.models.table
   (:require [metabase
              [db :as mdb]
+             [mbql :as mbql]
              [util :as u]]
             [metabase.models
              [database :refer [Database]]
@@ -29,6 +30,14 @@
 
 
 (models/defmodel Table :metabase_table)
+
+(extend-type TableInstance
+  mbql/MBQL
+  (mbql/->mbql [{id :id, schema :schema, table-name :name}]
+    (list 'table id (str (when schema (str schema \.)) table-name)))
+
+  mbql/Table
+  (mbql/->Table [this] this))
 
 
 ;;; ------------------------------------------------------------ Lifecycle ------------------------------------------------------------

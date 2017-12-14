@@ -14,19 +14,12 @@
   [query]
   (= :query (keyword (:type query))))
 
-(defn datetime-field?
-  "Is FIELD a `DateTime` field?"
-  [{:keys [base-type special-type]}]
-  (or (isa? base-type :type/DateTime)
-      (isa? special-type :type/DateTime)))
-
 (defn query-without-aggregations-or-limits?
   "Is the given query an MBQL query without a `:limit`, `:aggregation`, or `:page` clause?"
   [{{aggregations :aggregation, :keys [limit page]} :query}]
   (and (not limit)
        (not page)
-       (or (empty? aggregations)
-           (= (:aggregation-type (first aggregations)) :rows))))
+       (empty? aggregations)))
 
 (defn query->remark
   "Generate an approparite REMARK to be prepended to a query to give DBAs additional information about the query being
@@ -58,7 +51,7 @@
       (str/replace #"_" "-")
       keyword))
 
-(defn get-normalized
+(defn ^:deprecated get-normalized
   "Get the value for normalized key K in map M, regardless of how the key was specified in M,
    whether string or keyword, lisp-case, snake_case, or SCREAMING_SNAKE_CASE.
 
@@ -75,7 +68,7 @@
    (or (get-normalized m k)
        not-found)))
 
-(defn get-in-normalized
+(defn ^:deprecated get-in-normalized
   "Like `get-normalized`, but accepts a sequence of keys KS, like `get-in`.
 
     (get-in-normalized {\"NUM_BIRDS\" {\"TOUCANS\" 2}} [:num-birds :toucans]) ; -> 2"
@@ -89,7 +82,7 @@
    (or (get-in-normalized m ks)
        not-found)))
 
-(defn dissoc-normalized
+(defn ^:deprecated dissoc-normalized
   "Remove all matching keys from map M regardless of case, string/keyword, or hypens/underscores.
 
      (dissoc-normalized {\"NUM_TOUCANS\" 3} :num-toucans) ; -> {}"

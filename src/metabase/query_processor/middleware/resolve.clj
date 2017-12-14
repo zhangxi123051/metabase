@@ -1,4 +1,4 @@
-(ns metabase.query-processor.middleware.resolve
+(ns ^:deprecated metabase.query-processor.middleware.resolve
   "Resolve references to `Fields`, `Tables`, and `Databases` in an expanded query dictionary. During the `expand`
   phase of the Query Processor, forms like `[:field-id 10]` are replaced with placeholder objects of types like
   `FieldPlaceholder` or similar. During this phase, we'll take those placeholder objects and fetch information from
@@ -30,7 +30,7 @@
 
 ;;; ---------------------------------------------------- UTIL FNS ----------------------------------------------------
 
-(defn rename-mb-field-keys
+(defn ^:deprecated rename-mb-field-keys
   "Rename the keys in a Metabase `Field` to match the format of those in Query Expander `Fields`."
   [field]
   (set/rename-keys (into {} field) {:id              :field-id
@@ -43,7 +43,7 @@
                                     :table_id        :table-id
                                     :parent_id       :parent-id}))
 
-(defn- rename-dimension-keys
+(defn- ^:deprecated rename-dimension-keys
   [dimension]
   (set/rename-keys (into {} dimension)
                    {:id                      :dimension-id
@@ -54,7 +54,7 @@
                     :created_at              :created-at
                     :updated_at              :updated-at}))
 
-(defn- rename-field-value-keys
+(defn- ^:deprecated rename-field-value-keys
   [field-values]
   (set/rename-keys (into {} field-values)
                    {:id                    :field-value-id
@@ -63,7 +63,7 @@
                     :updated_at            :updated-at
                     :created_at            :created-at}))
 
-(defn convert-db-field
+(defn ^:deprecated convert-db-field
   "Converts a field map from that database to a Field instance"
   [db-field]
   (-> db-field
@@ -108,7 +108,7 @@
 
 ;;; ----------------------------------------------------- FIELD ------------------------------------------------------
 
-(defn- field-unresolved-field-id
+(defn- ^:deprecated field-unresolved-field-id
   "Return the ID of a unresolved Fields belonging to a Field. (This means we'll just return the ID of the parent if
   it's not yet resolved.)"
   [{:keys [parent parent-id]}]
@@ -385,7 +385,7 @@
 
 ;;; ------------------------------------------------ PUBLIC INTERFACE ------------------------------------------------
 
-(defn resolve
+(defn ^:deprecated resolve
   "Resolve placeholders by fetching `Fields`, `Databases`, and `Tables` that are referred to in EXPANDED-QUERY-DICT."
   [expanded-query-dict]
   (some-> expanded-query-dict
@@ -393,7 +393,7 @@
           resolve-fields
           resolve-tables))
 
-(defn resolve-middleware
+(defn ^:deprecated resolve-middleware
   "Wraps the `resolve` function in a query-processor middleware"
   [qp]
   (fn [{database-id :database, :as query}]

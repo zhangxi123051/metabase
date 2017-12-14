@@ -22,6 +22,11 @@
   100
   (field-distinct-count (Field (id :checkins :venue_id))))
 
+;; NOCOMMIT
+(defn- x []
+  (metabase.test.data.datasets/with-engine :postgres
+    (field-distinct-count (Field (id :checkins :venue_id)))))
+
 (datasets/expect-with-engines metadata-queries-test-engines
   15
   (field-distinct-count (Field (id :checkins :user_id))))

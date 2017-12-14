@@ -5,7 +5,8 @@
 
 (defn- parse-param-value-for-type
   "Convert PARAM-VALUE to a type appropriate for PARAM-TYPE.
-   The frontend always passes parameters in as strings, which is what we want in most cases; for numbers, instead convert the parameters to integers or floating-point numbers."
+   The frontend always passes parameters in as strings, which is what we want in most cases; for numbers, instead
+  convert the parameters to integers or floating-point numbers."
   [param-type param-value]
   (cond
     ;; no conversion needed if PARAM-TYPE isn't :number or PARAM-VALUE isn't a string
@@ -33,7 +34,8 @@
     :else             []))
 
 (defn expand
-  "Expand parameters for MBQL queries in QUERY-DICT (replacing Dashboard or Card-supplied params with the appropriate values in the queries themselves)."
+  "Expand parameters for MBQL queries in QUERY-DICT (replacing Dashboard or Card-supplied params with the appropriate
+  values in the queries themselves)."
   [query-dict [{:keys [target value], :as param} & rest]]
   (cond
     (not param)      query-dict

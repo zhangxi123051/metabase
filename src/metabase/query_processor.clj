@@ -5,6 +5,9 @@
             [metabase
              [driver :as driver]
              [util :as u]]
+            [metabase.mbql
+             [parse :as parse]
+             [resolve :as new-resolve]]
             [metabase.models
              [query :as query]
              [query-execution :as query-execution :refer [QueryExecution]]]
@@ -20,7 +23,7 @@
              [cumulative-aggregations :as cumulative-ags]
              [dev :as dev]
              [driver-specific :as driver-specific]
-             [expand :as expand]
+             #_[expand :as expand]
              [expand-macros :as expand-macros]
              [fetch-source-query :as fetch-source-query]
              [format-rows :as format-rows]
@@ -31,8 +34,8 @@
              [permissions :as perms]
              [results-metadata :as results-metadata]
              [resolve-driver :as resolve-driver]
-             [resolve :as resolve]
-             [source-table :as source-table]]
+             #_[resolve :as resolve]
+             #_[source-table :as source-table]]
             [metabase.query-processor.util :as qputil]
             [metabase.util.schema :as su]
             [schema.core :as s]
@@ -49,6 +52,24 @@
   [query]
   {:pre [(map? query) (:driver query)]}
   (driver/execute-query (:driver query) query))
+
+(defn- parse [qp]
+  (comp qp (u/rpartial update :query parse/parse)))
+
+(defn- resolve-references [qp]
+  (comp qp
+        (u/rpartial update :query new-resolve/resolve)
+        (u/rpartial update :database (comp metabase.models.database/Database u/get-id))))
+
+(defn- whats-going-on [qp f]
+  (let [f-name (:name (meta f))]
+    (fn [query]
+      (println f-name "[pre]" (u/pprint-to-str 'yellow (:query query)))
+      (try
+        (u/prog1 ((f qp) query)
+          #_(println f-name "[post]" (u/pprint-to-str 'green <>)))
+        (catch Throwable e
+          (println e))))))
 
 ;; The way these functions are applied is actually straight-forward; it matches the middleware pattern used by
 ;; Compojure.
@@ -84,34 +105,39 @@
   [f]
   ;; ▼▼▼ POST-PROCESSING ▼▼▼  happens from TOP-TO-BOTTOM, e.g. the results of `f` are (eventually) passed to `limit`
   (-> f
-      dev/guard-multiple-calls
-      mbql-to-native/mbql->native                      ; ▲▲▲ NATIVE-ONLY POINT ▲▲▲ Query converted from MBQL to native here; all functions *above* will only see the native query
+      (whats-going-on #'dev/guard-multiple-calls)
+      ;; ▲▲▲ NATIVE-ONLY POINT ▲▲▲ Query converted from MBQL to native here; all functions *above* will only see the native query
+      (whats-going-on #'mbql-to-native/mbql->native)
       annotate-and-sort/annotate-and-sort
       perms/check-query-permissions
-      log-query/log-expanded-query
       dev/check-results-format
-      limit/limit
+      (whats-going-on #'limit/limit)
       cumulative-ags/handle-cumulative-aggregations
       format-rows/format-rows
       binning/update-binning-strategy
       results-metadata/record-and-return-metadata!
-      resolve/resolve-middleware
+      #_resolve/resolve-middleware
+      (whats-going-on #'resolve-references)
       add-dim/add-remapping
-      implicit-clauses/add-implicit-clauses
-      source-table/resolve-source-table-middleware
-      expand/expand-middleware                         ; ▲▲▲ QUERY EXPANSION POINT  ▲▲▲ All functions *above* will see EXPANDED query during PRE-PROCESSING
-      row-count-and-status/add-row-count-and-status    ; ▼▼▼ RESULTS WRAPPING POINT ▼▼▼ All functions *below* will see results WRAPPED in `:data` during POST-PROCESSING
+      (whats-going-on #'implicit-clauses/add-implicit-clauses)
+      #_source-table/resolve-source-table-middleware
+      #_expand/expand-middleware
+      row-count-and-status/add-row-count-and-status
+      ;; ▼▼▼ RESULTS WRAPPING POINT ▼▼▼ All functions *below* will see results WRAPPED in `:data` during POST-PROCESSING
       parameters/substitute-parameters
       expand-macros/expand-macros
-      driver-specific/process-query-in-context         ; (drivers can inject custom middleware if they implement IDriver's `process-query-in-context`)
+      driver-specific/process-query-in-context
       add-settings/add-settings
-      resolve-driver/resolve-driver                    ; ▲▲▲ DRIVER RESOLUTION POINT ▲▲▲ All functions *above* will have access to the driver during PRE- *and* POST-PROCESSING
+      resolve-driver/resolve-driver
+      ;; ▲▲▲ DRIVER RESOLUTION POINT ▲▲▲ All functions *above* will have access to the driver during PRE- *and* POST-PROCESSING
+      ;; (TODO - why isn't this like the first thing we do??)
       fetch-source-query/fetch-source-query
       log-query/log-initial-query
+      (whats-going-on #'parse)
       cache/maybe-return-cached-results
       log-query/log-results-metadata
       catch-exceptions/catch-exceptions))
-;; ▲▲▲ PRE-PROCESSING ▲▲▲ happens from BOTTOM-TO-TOP, e.g. the results of `expand-macros` are (eventually) passed to `expand-resolve`
+;; ▲▲▲ PRE-PROCESSING ▲▲▲ happens from BOTTOM-TO-TOP
 
 (defn query->native
   "Return the native form for QUERY (e.g. for a MBQL query on Postgres this would return a map containing the compiled
@@ -133,11 +159,13 @@
   "Expand a QUERY the same way it would normally be done as part of query processing.
    This is useful for things that need to look at an expanded query, such as permissions checking for Cards."
   (->> identity
-       resolve/resolve-middleware
-       source-table/resolve-source-table-middleware
-       expand/expand-middleware
+       #_resolve/resolve-middleware
+       resolve-references
+       #_source-table/resolve-source-table-middleware
+       #_expand/expand-middleware
        parameters/substitute-parameters
        expand-macros/expand-macros
+       parse
        fetch-source-query/fetch-source-query))
 ;; ▲▲▲ This only does PRE-PROCESSING, so it happens from bottom to top, eventually returning the preprocessed query
 ;; instead of running it

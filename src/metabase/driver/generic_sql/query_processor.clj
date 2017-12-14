@@ -11,6 +11,8 @@
              [driver :as driver]
              [util :as u]]
             [metabase.driver.generic-sql :as sql]
+            metabase.mbql
+            metabase.models.field
             [metabase.query-processor
              [annotate :as annotate]
              [interface :as i]
@@ -19,8 +21,21 @@
   (:import clojure.lang.Keyword
            [java.sql PreparedStatement ResultSet ResultSetMetaData SQLException]
            [java.util Calendar Date TimeZone]
-           [metabase.query_processor.interface AgFieldRef BinnedField DateTimeField DateTimeValue Expression
-            ExpressionRef Field FieldLiteral RelativeDateTimeValue Value]))
+           [metabase.mbql
+            ;; fields & values
+            AbsoluteDatetime RelativeDatetime DatetimeField
+            ;; aggregations
+            AverageAggregation CountAggregation CumulativeCountAggregation CumulativeSumAggregation
+            DistinctCountAggregation StandardDeviationAggregation SumAggregation MinimumAggregation MaximumAggregation
+            ;; filters
+            AndFilter OrFilter NotFilter EqualsFilter NotEqualsFilter LessThanFilter LessThanOrEqualFilter
+            GreaterThanFilter GreaterThanOrEqualFilter BetweenFilter InsideFilter StartsWithFilter EndsWithFilter
+            ContainsFilter
+            ;; etc
+            OrderBy
+            ;; putting it all together
+            Query]
+           metabase.models.field.FieldInstance))
 
 (def ^:dynamic *query*
   "The outer query currently being processed."
@@ -56,7 +71,7 @@
     form))
 
 ;; TODO - Consider moving this into query processor interface and making it a method on `ExpressionRef` instead ?
-(defn- expression-with-name
+#_(defn- expression-with-name
   "Return the `Expression` referenced by a given (keyword or string) EXPRESSION-NAME."
   [expression-name]
   (or (get-in *query* [:query :expressions (keyword expression-name)]) (:expressions (:query *query*))
@@ -85,34 +100,34 @@
 (defmethod ->honeysql [Object nil]    [_ _]    nil)
 (defmethod ->honeysql [Object Object] [_ this] this)
 
-(defmethod ->honeysql [Object Expression]
+#_(defmethod ->honeysql [Object Expression]
   [driver {:keys [operator args]}]
   (apply (partial hsql/call operator)
          (map (partial ->honeysql driver) args)))
 
-(defmethod ->honeysql [Object ExpressionRef]
+#_(defmethod ->honeysql [Object ExpressionRef]
   [driver {:keys [expression-name]}]
   ;; Unfortunately you can't just refer to the expression by name in other clauses like filter, but have to use the
   ;; original formula.
   (->honeysql driver (expression-with-name expression-name)))
 
-(defmethod ->honeysql [Object Field]
-  [driver {:keys [schema-name table-name special-type field-name]}]
+(defmethod ->honeysql [Object FieldInstance]
+  [driver {special-type :special_type, field-name :name, {schema-name :schema, table-name :name} :table}]
   (let [field (keyword (hx/qualify-and-escape-dots schema-name table-name field-name))]
     (cond
       (isa? special-type :type/UNIXTimestampSeconds)      (sql/unix-timestamp->timestamp driver field :seconds)
       (isa? special-type :type/UNIXTimestampMilliseconds) (sql/unix-timestamp->timestamp driver field :milliseconds)
       :else                                               field)))
 
-(defmethod ->honeysql [Object FieldLiteral]
+#_(defmethod ->honeysql [Object FieldLiteral]
   [driver {:keys [field-name]}]
   (->honeysql driver (keyword (hx/escape-dots (name field-name)))))
 
-(defmethod ->honeysql [Object DateTimeField]
+(defmethod ->honeysql [Object DatetimeField]
   [driver {unit :unit, field :field}]
   (sql/date driver unit (->honeysql driver field)))
 
-(defmethod ->honeysql [Object BinnedField]
+#_(defmethod ->honeysql [Object BinnedField]
   [driver {:keys [bin-width min-value max-value field]}]
   (let [honeysql-field-form (->honeysql driver field)]
     ;;
@@ -128,7 +143,7 @@
         (hx/+ min-value))))
 
 ;; e.g. the ["aggregation" 0] fields we allow in order-by
-(defmethod ->honeysql [Object AgFieldRef]
+#_(defmethod ->honeysql [Object AgFieldRef]
   [_ {index :index}]
   (let [{:keys [aggregation-type]} (aggregation-at-index index)]
     ;; For some arcane reason we name the results of a distinct aggregation "count",
@@ -137,22 +152,54 @@
       :count
       aggregation-type)))
 
-(defmethod ->honeysql [Object Value]
+#_(defmethod ->honeysql [Object Value]
   [driver {:keys [value]}]
   (->honeysql driver value))
 
-(defmethod ->honeysql [Object DateTimeValue]
-  [driver {{unit :unit} :field, value :value}]
-  (sql/date driver unit (->honeysql driver value)))
+(defmethod ->honeysql [Object AbsoluteDatetime]
+  [driver {:keys [timestamp unit]}]
+  (sql/date driver unit (->honeysql driver timestamp)))
 
-(defmethod ->honeysql [Object RelativeDateTimeValue]
-  [driver {:keys [amount unit], {field-unit :unit} :field}]
-  (sql/date driver field-unit (if (zero? amount)
-                                (sql/current-datetime-fn driver)
-                                (driver/date-interval driver unit amount))))
+(defmethod ->honeysql [Object RelativeDatetime]
+  [driver {:keys [amount unit]}]
+  (sql/date driver unit (if (zero? amount)
+                          (sql/current-datetime-fn driver)
+                          (driver/date-interval driver unit amount))))
 
 
 ;;; ## Clause Handlers
+
+(defmethod ->honeysql [Object AverageAggregation]
+  [driver {:keys [field]}]
+  (hsql/call :avg (->honeysql driver field)))
+
+(defmethod ->honeysql [Object CountAggregation]
+  [driver {:keys [field]}]
+  (if-not field
+    :%count.*
+    (hsql/call :count (->honeysql driver field))))
+
+(defmethod ->honeysql [Object DistinctCountAggregation]
+  [driver {:keys [field]}]
+  (hsql/call :distinct (->honeysql driver field)))
+
+(defmethod ->honeysql [Object StandardDeviationAggregation]
+  [driver {:keys [field]}]
+  (hsql/call (sql/stddev-fn driver) (->honeysql driver field)))
+
+(defmethod ->honeysql [Object SumAggregation]
+  [driver {:keys [field]}]
+  (hsql/call :sum (->honeysql driver field)))
+
+(defmethod ->honeysql [Object MinimumAggregation]
+  [driver {:keys [field]}]
+  (hsql/call :min (->honeysql driver field)))
+
+(defmethod ->honeysql [Object MaximumAggregation]
+  [driver {:keys [field]}]
+  (hsql/call :max (->honeysql driver field)))
+
+
 
 (defn- aggregation->honeysql
   "Generate the HoneySQL form for an aggregation."
@@ -192,16 +239,17 @@
   (h/merge-select honeysql-form [(expression-aggregation->honeysql driver expression)
                                  (hx/escape-dots (driver/format-custom-field-name driver (annotate/aggregation-name expression)))]))
 
-(defn- apply-single-aggregation [driver honeysql-form {:keys [aggregation-type field], :as aggregation}]
-  (h/merge-select honeysql-form [(aggregation->honeysql driver aggregation-type field)
+(defn- apply-single-aggregation [driver honeysql-form aggregation]
+  (h/merge-select honeysql-form [(->honeysql driver aggregation)
                                  (hx/escape-dots (annotate/aggregation-name aggregation))]))
 
 (defn apply-aggregation
   "Apply a `aggregation` clauses to HONEYSQL-FORM. Default implementation of `apply-aggregation` for SQL drivers."
   [driver honeysql-form {aggregations :aggregation}]
   (loop [form honeysql-form, [ag & more] aggregations]
-    (let [form (if (instance? Expression ag)
-                 (apply-expression-aggregation driver form ag)
+    (let [form (#_if #_(instance? Expression ag)
+                     #_(apply-expression-aggregation driver form ag)
+                     identity
                  (apply-single-aggregation driver form ag))]
       (if-not (seq more)
         form
@@ -271,17 +319,18 @@
   [_ honeysql-form {value :limit}]
   (h/limit honeysql-form value))
 
+(defmethod ->honeysql [Object OrderBy]
+  [driver {:keys [field direction]}]
+  [(->honeysql driver field) direction])
+
 (defn apply-order-by
   "Apply `order-by` clause to HONEYSQL-FORM. Default implementation of `apply-order-by` for SQL drivers."
-  [driver honeysql-form {subclauses :order-by breakout-fields :breakout}]
-  (let [[{:keys [special-type] :as first-breakout-field}] breakout-fields]
-    (loop [honeysql-form honeysql-form, [{:keys [field direction]} & more] subclauses]
-      (let [honeysql-form (h/merge-order-by honeysql-form [(->honeysql driver field) (case direction
-                                                                                       :ascending  :asc
-                                                                                       :descending :desc)])]
-        (if (seq more)
-          (recur honeysql-form more)
-          honeysql-form)))))
+  [driver honeysql-form {clauses :order-by}]
+  (loop [honeysql-form honeysql-form, [clause & more] clauses]
+    (let [honeysql-form (h/merge-order-by honeysql-form (->honeysql driver clause))]
+      (if (seq more)
+        (recur honeysql-form more)
+        honeysql-form))))
 
 (defn apply-page
   "Apply `page` clause to HONEYSQL-FORM. Default implementation of `apply-page` for SQL drivers."

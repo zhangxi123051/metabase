@@ -1,4 +1,4 @@
-(ns metabase.query-processor.middleware.source-table
+(ns ^:deprecated metabase.query-processor.middleware.source-table
   (:require [metabase.models.table :refer [Table]]
             [metabase.query-processor.util :as qputil]
             [toucan.db :as db]))
