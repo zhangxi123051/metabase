@@ -207,7 +207,7 @@ export default class FilterPopover extends Component {
                         onCommit={this.onCommit}
                     />
                 );
-            } else if (field && field.filterSearchField()) {
+            } else if (field && field.searchField()) {
                 return (
                     <SearchPicker
                         // $FlowFixMe
@@ -218,7 +218,7 @@ export default class FilterPopover extends Component {
                         onCommit={this.onCommit}
                         // $FlowFixMe
                         field={field}
-                        searchField={field.filterSearchField()}
+                        searchField={field.searchField()}
                     />
                 );
             } else if (operatorField.type === "text") {

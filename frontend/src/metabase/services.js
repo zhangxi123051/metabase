@@ -92,6 +92,27 @@ export const LdapApi = {
     updateSettings:              PUT("/api/ldap/settings")
 };
 
+import _ from "underscore";
+function addImplicitNameRemappings(table) {
+    const nameField = _.findWhere(table.fields, { special_type: "type/Name" });
+    for (const field of table.fields) {
+        // https://github.com/metabase/metabase/issues/3417
+        if (Array.isArray(field.dimensions) && field.dimensions.length === 0) {
+            field.dimensions = null;
+        }
+
+        if (!field.dimensions && field.special_type === "type/PK" && nameField) {
+            field.dimensions = {
+                field_id: field.id,
+                type: "external",
+                // XXX:
+                name: "TODO: WHAT SHOULD THIS BE",
+                human_readable_field_id: nameField.id
+            }
+        }
+    }
+}
+
 export const MetabaseApi = {
     db_list:                     GET("/api/database"),
     db_list_with_tables:         GET("/api/database?include_tables=true&include_cards=true"),
@@ -102,7 +123,13 @@ export const MetabaseApi = {
     db_get:                      GET("/api/database/:dbId"),
     db_update:                   PUT("/api/database/:id"),
     db_delete:                DELETE("/api/database/:dbId"),
-    db_metadata:                 GET("/api/database/:dbId/metadata"),
+    db_metadata:                 GET("/api/database/:dbId/metadata", (database) => {
+      // XXX: remove or move to backend before merging
+      for (const table of database.tables) {
+          addImplicitNameRemappings(table);
+      }
+      return database;
+    }),
     // db_tables:                   GET("/api/database/:dbId/tables"),
     db_fields:                   GET("/api/database/:dbId/fields"),
     db_idfields:                 GET("/api/database/:dbId/idfields"),
@@ -135,6 +162,8 @@ export const MetabaseApi = {
                                                 field.default_dimension_option = table.dimension_options[field.default_dimension_option];
                                             }
                                         }
+
+                                        addImplicitNameRemappings(table);
                                     }
 
                                     return table;

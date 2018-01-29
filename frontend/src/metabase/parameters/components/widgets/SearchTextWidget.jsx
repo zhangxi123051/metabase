@@ -67,7 +67,7 @@ export default class SearchTextWidget extends Component<*, Props, State> {
                     autoFocus={this.state.isFocused}
                     placeholder={isEditing ? "Enter a default value..." : defaultPlaceholder}
                     field={field}
-                    searchField={field && field.parameterSearchField()}
+                    searchField={field && field.searchField()}
                 />
             )
         }
