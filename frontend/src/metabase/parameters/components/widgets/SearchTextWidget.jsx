@@ -34,7 +34,7 @@ export default class SearchTextWidget extends Component<*, Props, State> {
     static noPopover = true;
 
     static format(value, field) {
-        return <RemappedValue value={value} column={field} />
+        return <RemappedValue value={value} column={field} displayColumn={field.parameterSearchField()} />
     }
 
     render() {

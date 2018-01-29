@@ -486,11 +486,24 @@ const ADD_REMAPPINGS = "metabase/metadata/ADD_REMAPPINGS";
 export const addRemappings = createAction(ADD_REMAPPINGS, (fieldId, remappings) => ({ fieldId, remappings }));
 
 const FETCH_REMAPPING = "metabase/metadata/FETCH_REMAPPING";
-export const fetchRemapping = createThunkAction(FETCH_REMAPPING, (value, fieldId) =>
+export const fetchRemapping = createThunkAction(FETCH_REMAPPING, (value, fieldId, remappedFieldId) =>
     async (dispatch, getState) => {
         const metadata = getMetadata(getState());
         const field = metadata.fields[fieldId];
-        const remappedField = field && field.remappedField();
+
+        // FIXME: since we're passing in remappedFieldId to support "implicit"
+        // remapped fields in parameter widgets it's possible it will be
+        // different than field.remappedField(). We should try to unify them
+        // somehow, perhaps by automatically setting up a remapping for pks
+        // but only use it in filters/parameters, not table/object details.
+
+        // Alternatively add a remappedField argument to `remappedValue` and
+        // add another level of maps to field.remapping, i.e.
+        // field.remapping[remappedFieldId][value]
+
+        // const remappedField = field && field.remappedField();
+        const remappedField = metadata.fields[remappedFieldId];
+
         if (field && remappedField && field.remappedValue(value) === undefined) {
             fetchData({
                 dispatch,

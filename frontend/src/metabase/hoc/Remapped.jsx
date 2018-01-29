@@ -6,18 +6,24 @@ import { createSelector } from "reselect";
 import { getMetadata } from "metabase/selectors/metadata";
 import { fetchRemapping } from "metabase/redux/metadata";
 
-const getField = createSelector(
+const getFieldFromColumnProp = createSelector(
     [getMetadata, (state, props) => props.column && props.column.id],
     (metadata, columnId) => metadata.fields[columnId]
 );
 
+const getFieldFromDisplayColumnProp = createSelector(
+    [getMetadata, (state, props) => props.displayColumn && props.displayColumn.id],
+    (metadata, displayColumnId) => metadata.fields[displayColumnId]
+);
+
 const getDisplayValue = createSelector(
-    [(state, props) => props.value, getField],
+    [(state, props) => props.value, getFieldFromColumnProp],
     (value, field) => field && field.remappedValue(value)
 );
+
 const getDisplayColumn = createSelector(
-    [getField],
-    field => field && field.remappedField()
+    [getFieldFromColumnProp, getFieldFromDisplayColumnProp],
+    (field, displayField) => displayField || (field && field.remappedField())
 );
 
 const mapStateToProps = (state, props) => ({
@@ -37,20 +43,19 @@ export default ComposedComponent =>
             "]";
 
         componentWillMount() {
-            if (this.props.column) {
-                this.props.fetchRemapping(
-                    this.props.value,
-                    this.props.column.id
-                );
-            }
+            this.fetchRemapping(this.props);
         }
         componentWillReceiveProps(nextProps) {
             if (
-                nextProps.column &&
                 (this.props.value !== nextProps.value ||
                     this.props.column !== nextProps.column)
             ) {
-                this.props.fetchRemapping(nextProps.value, nextProps.column.id);
+                this.fetchRemapping(nextProps);
+            }
+        }
+        fetchRemapping(props) {
+            if (props.column && props.displayColumn) {
+              props.fetchRemapping(props.value, props.column.id, props.displayColumn.id);
             }
         }
 
