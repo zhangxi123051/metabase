@@ -6,6 +6,7 @@ import { connect } from "react-redux";
 import Navbar from "metabase/nav/containers/Navbar.jsx";
 
 import UndoListing from "metabase/containers/UndoListing";
+import Uploader from "metabase/containers/Uploader";
 
 import NotFound from "metabase/components/NotFound.jsx";
 import Unauthorized from "metabase/components/Unauthorized.jsx";
@@ -45,6 +46,7 @@ export default class App extends Component {
         <Navbar location={location} className="flex-no-shrink" />
         {errorPage ? getErrorComponent(errorPage) : children}
         <UndoListing />
+        <Uploader />
       </div>
     );
   }
