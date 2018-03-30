@@ -2,14 +2,16 @@ import React, { Component } from "react";
 import PropTypes from "prop-types";
 import cx from "classnames";
 import { t } from "c-3po";
+import { Box, Flex, Heading, Subhead } from "rebass";
 
 import { connect } from "react-redux";
 import { push } from "react-router-redux";
-import { Link } from "react-router";
+import { Link, withRouter } from "react-router";
 
 import Icon from "metabase/components/Icon.jsx";
 import LogoIcon from "metabase/components/LogoIcon.jsx";
 import * as Urls from "metabase/lib/urls";
+import CollectionListLoader from "metabase/components/CollectionListLoader";
 
 import ProfileLink from "metabase/nav/components/ProfileLink.jsx";
 
@@ -41,6 +43,40 @@ const BUTTON_PADDING_STYLES = {
   },
 };
 
+const CollectionList = ({ collectionSlug }) => {
+  return (
+    <Box
+      p={2}
+      style={{ height: '100vh' }}
+    >
+      <CollectionListLoader>
+        {({ collections, loading, error }) => {
+          if (loading) {
+            return <Box>Loading...</Box>;
+          }
+          let collectionList = collections
+          if(collectionSlug) {
+            collectionList.reverse()
+          }
+          return (
+            <Box>
+              {collections.map(collection => (
+                <Flex align="center" my={1} key={`collection-${collection.id}`}>
+                  <Icon name="all" className="mr1" />
+                  <Link to={`collections/${collection.slug}`}>
+                    {collection.name}
+                  </Link>
+                </Flex>
+              ))}
+            </Box>
+          );
+        }}
+      </CollectionListLoader>
+    </Box>
+  );
+};
+
+
 const AdminNavItem = ({ name, path, currentPath }) => (
   <li>
     <Link
@@ -55,7 +91,7 @@ const AdminNavItem = ({ name, path, currentPath }) => (
   </li>
 );
 
-class SearchBar extends React.Component {
+export class SearchBar extends React.Component {
   state = {
     active: false,
   };
@@ -93,6 +129,7 @@ const MainNavLink = ({ to, name, eventName, icon }) => (
   </Link>
 );
 
+@withRouter
 @connect(mapStateToProps, mapDispatchToProps)
 export default class Navbar extends Component {
   static propTypes = {
@@ -168,8 +205,25 @@ export default class Navbar extends Component {
 
   renderMainNav() {
     return (
-      <nav className="relative bg-brand">
-        <ul className="flex align-center">
+      <Box p={1} className="relative" style={{  backgroundColor: "#FAFCFE" }}>
+        <ul>
+          <li>
+            <Flex>
+              <Heading>
+                { this.props.params.collectionSlug
+                    ? <Flex align='center'>
+                        <Icon name='chevronleft' />
+                        <Link>{this.props.params.collectionSlug}</Link>
+                      </Flex>
+                    : (
+                      <Link to='/'>
+                        Metabase, Inc
+                      </Link>
+                    )
+                }
+              </Heading>
+            </Flex>
+          </li>
           <li>
             <Link
               to="/"
@@ -181,7 +235,7 @@ export default class Navbar extends Component {
             </Link>
           </li>
           <li>
-            <SearchBar />
+            <CollectionList />
           </li>
           <li className="flex-align-right transition-background hide sm-show">
             <div className="inline-block text-white">
@@ -189,12 +243,12 @@ export default class Navbar extends Component {
             </div>
           </li>
         </ul>
-      </nav>
+      </Box>
     );
   }
 
   render() {
-    const { context, user } = this.props;
+    const { context, user  } = this.props;
 
     if (!user) return null;
 

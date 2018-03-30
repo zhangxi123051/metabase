@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Flex, Heading, Subhead } from "rebass";
+import { Box, Flex, Heading, Subhead, Container} from "rebass";
 import { Link } from "react-router";
 
 import Icon from "metabase/components/Icon";
@@ -10,6 +10,8 @@ import SegmentList from 'metabase/components/SegmentList'
 import MetricList from 'metabase/components/MetricList'
 
 import LandingNav from "metabase/components/LandingNav";
+
+import Navbar, { SearchBar } from 'metabase/nav/containers/Navbar'
 
 const CollectionList = ({ collectionSlug }) => {
   return (
@@ -60,27 +62,13 @@ class CollectionLanding extends React.Component {
   render() {
     const { children } = this.props;
     return (
-      <Box>
-        <Flex py={3} style={{ borderBottom: '1px solid #DCE1E4'}} pl={3}>
-          {/* TODO - this should be the collection or instance name */}
-          <Subhead>
-            <Flex align='center'>
-              <Flex>
-                <Link to='/'>Metabase, Inc</Link>
-              </Flex>
-              { this.props.params.collectionSlug && (
-                <Flex align='center'>
-                  <Icon name='chevronright' className="ml2 mr2" />
-                  <Flex>
-                    <Link to={`/collections/${this.props.params.collectionSlug}`}>
-                      {this.props.params.collectionSlug }
-                    </Link>
-                  </Flex>
-                </Flex>
-              )}
-            </Flex>
-          </Subhead>
-
+      <Flex w={'100%'}>
+        <Navbar location={location} className="flex-no-shrink" />
+      <Box className="wrapper" style={{ maxWidth: 1800 }}>
+        <Flex py={3}>
+          <Box>
+            <SearchBar />
+          </Box>
           <Box ml='auto'>
             <EntityMenu
               items={[
@@ -105,24 +93,18 @@ class CollectionLanding extends React.Component {
                   title: 'Archive'
                 }
               ]}
-              triggerIcon="pencil"
+              triggerIcon="burger"
             />
           </Box>
         </Flex>
-        <Flex>
-          <Box w={1 / 3}>
-            <CollectionList collectionSlug={this.props.params.collectionSlug} />
+        <Box w={'100%'}>
+          <Box py={2}>
+            <LandingNav collectionSlug={this.props.params.collectionSlug} />
           </Box>
-          <Box w={2 / 3} ml={3}>
-            <Box>
-              <Box py={2}>
-                <LandingNav collectionSlug={this.props.params.collectionSlug} />
-              </Box>
-              {children ? children : <DefaultLanding />}
-            </Box>
-          </Box>
-        </Flex>
+          {children ? children : <DefaultLanding />}
+        </Box>
       </Box>
+      </Flex>
     );
   }
 }

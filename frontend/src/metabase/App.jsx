@@ -41,8 +41,7 @@ export default class App extends Component {
     const { children, location, errorPage } = this.props;
 
     return (
-      <div className="spread flex flex-column">
-        <Navbar location={location} className="flex-no-shrink" />
+      <div className="full">
         {errorPage ? getErrorComponent(errorPage) : children}
         <UndoListing />
       </div>
