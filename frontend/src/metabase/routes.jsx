@@ -214,7 +214,6 @@ export const getRoutes = store => (
           The global landing is where you see global
           */
         }
-        <IndexRoute component={GlobalLanding} />
         <Route
           path="dashboards"
           title={t`Dashboards`}

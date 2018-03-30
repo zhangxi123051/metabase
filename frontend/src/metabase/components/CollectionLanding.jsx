@@ -13,6 +13,8 @@ import LandingNav from "metabase/components/LandingNav";
 
 import Navbar, { SearchBar } from 'metabase/nav/containers/Navbar'
 
+import DashboardList from 'metabase/components/DashboardList'
+
 const CollectionList = ({ collectionSlug }) => {
   return (
     <Box
@@ -50,6 +52,8 @@ const CollectionList = ({ collectionSlug }) => {
 const DefaultLanding = () => {
   return (
     <Box w="100%">
+      <Subhead>Pinned dashboards</Subhead>
+      <DashboardList limit={4} />
       <Subhead>Pinned metrics</Subhead>
       <MetricList />
       <Subhead>Pinned segments</Subhead>
@@ -101,7 +105,7 @@ class CollectionLanding extends React.Component {
           <Box py={2}>
             <LandingNav collectionSlug={this.props.params.collectionSlug} />
           </Box>
-          {children ? children : <DefaultLanding />}
+          { children ? children : <DefaultLanding /> }
         </Box>
       </Box>
       </Flex>
