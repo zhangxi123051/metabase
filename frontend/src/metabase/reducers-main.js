@@ -36,6 +36,10 @@ import alert from "metabase/alert/alert";
 /* pulses */
 import * as pulse from "metabase/pulse/reducers";
 
+const theme = (state = {}, action) => {
+  return state;
+};
+
 export default {
   ...commonReducers,
 
@@ -52,4 +56,5 @@ export default {
   setup: combineReducers(setup),
   user: combineReducers(user),
   admin,
+  theme,
 };

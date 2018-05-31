@@ -47,6 +47,7 @@ const AdminNavItem = ({ name, path, currentPath }) => (
 const SearchWrapper = Flex.extend`
   ${width} border-radius: 6px;
   align-items: center;
+<<<<<<< HEAD
   border: 1px solid transparent;
   transition: background 300ms ease-in;
 `;
@@ -99,6 +100,7 @@ class SearchBar extends React.Component {
           })}
           onClick={() => this.setState({ active: true })}
           active={this.state.active}
+          color="white"
         >
           <Icon name="search" ml={2} />
           <SearchInput
@@ -218,16 +220,10 @@ export default class Navbar extends Component {
 
   renderMainNav() {
     return (
-      <Flex className="Nav relative bg-brand text-white z4" align="center">
-        <Box>
-          <Link
-            to="/"
-            data-metabase-event={"Navbar;Logo"}
-            className="LogoNavItem NavItem cursor-pointer relative z2 flex align-center transition-background justify-center"
-          >
-            <LogoIcon dark />
-          </Link>
-        </Box>
+      <Flex bg="primary" color="white" align="center" className="Nav relative">
+        <Link to="/" data-metabase-event={"Navbar;Logo"} className="z2">
+          <LogoIcon dark />
+        </Link>
         <Flex
           className="absolute top left right bottom z1"
           px={4}

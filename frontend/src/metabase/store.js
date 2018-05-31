@@ -96,7 +96,7 @@ export const trackEvent = ({ dispatch, getState }) => next => action => {
   return next(action);
 };
 
-export function getStore(reducers, history, intialState, enhancer = a => a) {
+export function getStore(reducers, history, initialState, enhancer = a => a) {
   const reducer = combineReducers({
     ...reducers,
     form,
@@ -113,7 +113,7 @@ export function getStore(reducers, history, intialState, enhancer = a => a) {
 
   return createStore(
     reducer,
-    intialState,
+    initialState,
     compose(applyMiddleware(...middleware), devToolsExtension, enhancer),
   );
 }
