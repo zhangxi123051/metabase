@@ -3,14 +3,12 @@ import React from "react";
 import { Flex, Box, Truncate } from "rebass";
 import Icon from "metabase/components/Icon";
 
-import { normal } from "metabase/lib/colors";
-
 const EntityItemWrapper = Flex.extend`
   border-bottom: 1px solid #f8f9fa;
   /* TODO - figure out how to use the prop instead of this? */
   align-items: center;
   &:hover {
-    color: ${normal.blue};
+    color: 'primary';
   }
   &:last-child {
     border-bottom: none;

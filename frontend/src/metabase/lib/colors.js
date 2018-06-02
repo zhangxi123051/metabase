@@ -12,12 +12,7 @@ export const normal = {
   yellow: "#f9d45c",
   orange: "#F1B556",
   teal: "#A6E7F3",
-  indigo: "#7172AD",
   gray: "#7B8797",
-  grey1: "#DCE1E4",
-  grey2: "#93A1AB",
-  grey3: "#2E353B",
-  text: "#2E353B",
 };
 
 export const saturated = {

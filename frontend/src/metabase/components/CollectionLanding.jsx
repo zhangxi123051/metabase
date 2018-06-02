@@ -39,8 +39,8 @@ const mapDispatchToProps = {
 const CollectionItem = ({ collection }) => (
   <Link
     to={`collection/${collection.id}`}
-    hover={{ color: normal.blue }}
-    color={normal.grey2}
+    hover={{ color: 'primary' }}
+    color='grey2'
   >
     <Flex
       align="center"
@@ -302,7 +302,7 @@ class CollectionLanding extends React.Component {
                   <Flex align="center">
                     <Link
                       to={`/collection/${collectionId}`}
-                      hover={{ color: normal.blue }}
+                      hover={{ color: 'primary' }}
                     >
                       {collectionId === "root"
                         ? "Saved items"

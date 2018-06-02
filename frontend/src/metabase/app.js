@@ -50,8 +50,19 @@ const browserHistory = useRouterHistory(createHistory)({
 const baseTheme = {
   font: "Lato",
   colors: {
-    primary: "#509ee3",
+    //primary: "#509ee3",
+    primary: "red",
+    metric: "#9CC177",
+    indigo: "#7172AD",
+    question: '#93B3C9',
+    grey1: "#DCE1E4",
+    grey2: "#93A1AB",
+    grey3: "#2E353B",
+    text: "#2E353B",
   },
+  spacing: [
+    4, 6, 8, 10, 12
+  ]
 };
 
 function _init(reducers, getRoutes, callback) {
