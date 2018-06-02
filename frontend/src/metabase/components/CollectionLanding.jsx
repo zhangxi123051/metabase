@@ -39,7 +39,6 @@ const mapDispatchToProps = {
 const CollectionItem = ({ collection }) => (
   <Link
     to={`collection/${collection.id}`}
-    hover={{ color: 'primary' }}
     color='grey2'
   >
     <Flex
@@ -213,7 +212,6 @@ class DefaultLanding extends React.Component {
                               <Link
                                 to={url}
                                 className="hover-parent hover--visibility"
-                                hover={{ color: normal.blue }}
                               >
                                 <Card hoverable p={3}>
                                   <Icon
@@ -302,7 +300,6 @@ class CollectionLanding extends React.Component {
                   <Flex align="center">
                     <Link
                       to={`/collection/${collectionId}`}
-                      hover={{ color: 'primary' }}
                     >
                       {collectionId === "root"
                         ? "Saved items"

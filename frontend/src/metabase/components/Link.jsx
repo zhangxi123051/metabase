@@ -16,4 +16,8 @@ const Link = styled(BaseLink)`
   ${color}
 `;
 
+Link.defaultProps = {
+  hover: { color: 'primary' }
+}
+
 export default Link;

@@ -1,8 +1,8 @@
 import cxs from "cxs";
 import React from "react";
-import { Link } from "react-router";
 
 import Icon from "metabase/components/Icon";
+import Link from "metabase/components/Link";
 
 const itemClasses = cxs({
   display: "flex",
@@ -16,14 +16,14 @@ const itemClasses = cxs({
   textDecoration: "none",
   transition: "all 300ms linear",
   ":hover": {
-    color: "#509ee3",
+    color: "primary",
   },
   "> .Icon": {
     color: "#BCC5CA",
     marginRight: "0.65em",
   },
   ":hover > .Icon": {
-    color: "#509ee3",
+    color: "primary",
     transition: "all 300ms linear",
   },
   // icon specific tweaks
@@ -47,7 +47,7 @@ const itemClasses = cxs({
 });
 
 const LinkMenuItem = ({ children, link }) => (
-  <Link className={itemClasses} to={link}>
+  <Link className={itemClasses} to={link} hover={{ color: 'primary' }}>
     {children}
   </Link>
 );

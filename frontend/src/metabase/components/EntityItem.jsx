@@ -8,10 +8,7 @@ const EntityItemWrapper = Flex.extend`
   /* TODO - figure out how to use the prop instead of this? */
   align-items: center;
   &:hover {
-    color: 'primary';
-  }
-  &:last-child {
-    border-bottom: none;
+    color: primary;
   }
 `;
 

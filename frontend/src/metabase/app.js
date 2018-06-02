@@ -49,19 +49,29 @@ const browserHistory = useRouterHistory(createHistory)({
 
 const baseTheme = {
   font: "Lato",
+  weights: {
+    normal: 400,
+    bold: 700
+  },
   colors: {
     //primary: "#509ee3",
-    primary: "red",
+    primary: "#fd5c63",
     metric: "#9CC177",
-    indigo: "#7172AD",
+    segment: "#7172AD",
     question: '#93B3C9',
+    dashboard: 'red',
     grey1: "#DCE1E4",
     grey2: "#93A1AB",
     grey3: "#2E353B",
     text: "#2E353B",
   },
-  spacing: [
-    4, 6, 8, 10, 12
+  space: [
+    4,
+    8,
+    16,
+    32,
+    64,
+    128,
   ]
 };
 

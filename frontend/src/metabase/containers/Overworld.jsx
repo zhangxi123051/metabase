@@ -7,7 +7,6 @@ import CollectionItemsLoader from "metabase/containers/CollectionItemsLoader";
 import { DatabaseListLoader } from "metabase/components/BrowseApp";
 
 import * as Urls from "metabase/lib/urls";
-import { normal } from "metabase/lib/colors";
 
 import Card from "metabase/components/Card";
 import { Grid, GridItem } from "metabase/components/Grid";
@@ -46,12 +45,11 @@ class Overworld extends React.Component {
                     <GridItem>
                       <Link
                         to={Urls.dashboard(pin.id)}
-                        hover={{ color: normal.blue }}
                       >
                         <Card hoverable p={3}>
                           <Icon
                             name="dashboard"
-                            color={normal.blue}
+                            color='primary'
                             mb={2}
                             size={28}
                           />
@@ -66,8 +64,8 @@ class Overworld extends React.Component {
                 <GridItem>
                   <Link
                     to="/collection/root"
-                    color={normal.grey2}
-                    className="text-brand-hover"
+                    color='grey2'
+                    hover={{ color: 'primary' }}
                   >
                     <Flex p={4} align="center">
                       <h3>See more items</h3>
@@ -91,12 +89,12 @@ class Overworld extends React.Component {
                       <GridItem>
                         <Link
                           to={`browse/${database.id}`}
-                          hover={{ color: normal.blue }}
+                          hover={{ color: 'primary' }}
                         >
                           <Box p={3} bg="#F2F5F7">
                             <Icon
                               name="database"
-                              color={normal.green}
+                              color='data'
                               mb={3}
                               size={28}
                             />

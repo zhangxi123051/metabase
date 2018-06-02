@@ -47,7 +47,6 @@ const AdminNavItem = ({ name, path, currentPath }) => (
 const SearchWrapper = Flex.extend`
   ${width} border-radius: 6px;
   align-items: center;
-<<<<<<< HEAD
   border: 1px solid transparent;
   transition: background 300ms ease-in;
 `;
@@ -238,7 +237,7 @@ export default class Navbar extends Component {
         </Flex>
         <Flex align="center" ml="auto" className="z4">
           <Link to="question/new" mx={1}>
-            <Button medium color="#509ee3">
+            <Button medium color="primary">
               New question
             </Button>
           </Link>
