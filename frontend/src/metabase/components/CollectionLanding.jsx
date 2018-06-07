@@ -247,7 +247,7 @@ class DefaultLanding extends React.Component {
                     <Flex align="center" mb={2}>
                       {pinned.length > 0 && (
                         <Box>
-                          <h4>{t`Saved here`}</h4>
+                          <h4>{t`Dashboards, saved questions, and pulses`}</h4>
                         </Box>
                       )}
                     </Flex>
@@ -305,7 +305,7 @@ class CollectionLanding extends React.Component {
                       to={`/collection/${collectionId}`}
                       hover={{ color: normal.blue }}
                     >
-                      {isRoot ? "Saved items" : currentCollection.name}
+                      {isRoot ? "Everything we've saved" : currentCollection.name}
                     </Link>
                   </Flex>
                 )}
