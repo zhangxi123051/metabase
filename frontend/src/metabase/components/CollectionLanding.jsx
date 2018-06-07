@@ -105,7 +105,7 @@ class DefaultLanding extends React.Component {
         };
       case "pulse":
         return {
-          url: Urls.pulseEdit(item.id),
+          url: Urls.pulse(item.id),
           iconName: "pulse",
           iconColor: normal.yellow,
         };

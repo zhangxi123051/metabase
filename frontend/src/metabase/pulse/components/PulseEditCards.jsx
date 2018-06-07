@@ -43,6 +43,7 @@ export default class PulseEditCards extends Component {
 
   setCard(index, card) {
     let { pulse } = this.props;
+    console.log(card)
     this.props.setPulse({
       ...pulse,
       cards: [
