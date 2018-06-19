@@ -137,6 +137,7 @@ export default class Navbar extends Component {
   state = {
     modal: null,
     showRoot: false,
+    condensed: false,
   };
 
   static propTypes = {
@@ -234,106 +235,171 @@ export default class Navbar extends Component {
 
   renderMainNav() {
     return (
-      <Box
-        className="Nav relative bg-brand text-white z4 flex-no-shrink"
-        w={320}
+      <Motion
+        defaultStyle={{ width: 320 }}
+        style={{ width: this.state.condensed ? spring(60) : spring(320) }}
       >
-        <Box p={2}>
-          {this.props.params.collectionId ? (
-            <Box
-              onClick={() => this.setState({ showRoot: !this.state.showRoot })}
-            >
-              <Flex align="center" py={1}>
-                <LogoIcon dark />
-                <h4>Metabase</h4>
-                <Icon name="chevronright" ml="auto" size={12} />
-              </Flex>
-            </Box>
-          ) : (
-            <Link
-              to="/"
-              data-metabase-event={"Navbar;Logo"}
-              className="LogoNavItem NavItem cursor-pointer relative z2 transition-background justify-center"
-            >
-              <LogoIcon dark />
-            </Link>
-          )}
-        </Box>
-        <Box className="relative full-height">
-          <Motion
-            defaultStyle={{ top: 0 }}
-            style={{ top: this.state.showRoot ? spring(1000) : spring(0) }}
-          >
-            {({ top }) => (
-              <Box
-                px={2}
-                bg="#509ee3"
-                style={{ transform: `translateY(${top}px)` }}
-                className="relative full-height z4"
-              >
-                <EntityObjectLoader
-                  entityType="collections"
-                  entityId={this.props.params.collectionId}
-                >
-                  {({ object }) => <h2>{object.name}</h2>}
-                </EntityObjectLoader>
-                <EntityListLoader
-                  entityType="search"
-                  entityQuery={(state, props) => ({
-                    collection: this.props.params.collectionId,
-                  })}
-                  wrapped
-                >
-                  {({ list, collection }) => {
-                    console.log(list, collection);
-                    return (
-                      <Box p={2}>
-                        {list.filter(i => i.model === "collection").map(c => (
-                          <Link to={Urls.collection(c.id)}>
-                            <Flex align="center">
-                              <Icon name="all" mr={1} />
-                              <h3>{c.name}</h3>
-                            </Flex>
-                          </Link>
-                        ))}
-                      </Box>
-                    );
-                  }}
-                </EntityListLoader>
-              </Box>
-            )}
-          </Motion>
+        {({ width }) => (
           <Box
-            px={2}
-            bg="#2D86D4"
-            className="absolute top left bottom right z2 "
+            className="Nav relative full-height bg-brand text-white z4 flex-no-shrink"
+            w={width}
           >
-            <CollectionListLoader>
-              {({ list }) =>
-                list.map(l => (
-                  <EntityObjectLoader entityType="collections" entityId={l.id}>
-                    {({ object }) => {
-                      console.log(object);
-                      if (object.effective_ancestors.length > 0) {
-                        return false;
-                      }
-                      return (
-                        <Link to={Urls.collection(l.id)} px={1}>
-                          <Flex align="center">
-                            <Icon name="all" mr={1} />
-                            <h3>{l.name}</h3>
-                          </Flex>
-                        </Link>
-                      );
-                    }}
-                  </EntityObjectLoader>
-                ))
-              }
-            </CollectionListLoader>
-          </Box>
-          )}
-        </Box>
-        {/*
+            <Flex className="absolute right top bottom z5">
+              <Box
+                bg="white"
+                p={2}
+                style={{
+                  borderTopLeftRadius: 6,
+                  borderBottomLeftRadius: 6,
+                }}
+                mt="auto"
+                mb="auto"
+                color="#509ee3"
+                onClick={() =>
+                  this.setState({ condensed: !this.state.condensed })
+                }
+              >
+                <Icon
+                  name={this.state.condensed ? "chevronright" : "chevronleft"}
+                />
+              </Box>
+            </Flex>
+            <Box>
+              {this.props.params.collectionId ? (
+                <Box
+                  p={2}
+                  onClick={() =>
+                    this.setState({ showRoot: !this.state.showRoot })
+                  }
+                  className="cursor-pointer"
+                  style={{
+                    borderBottom: "1px solid rgba(0, 0, 0, .12)",
+                  }}
+                >
+                  <Flex align="center" py={1}>
+                    <LogoIcon dark />
+                    <h4>Metabase</h4>
+                    <Motion
+                      defaultStyle={{ deg: 0 }}
+                      style={{
+                        deg: this.state.showRoot ? spring(90) : spring(0),
+                      }}
+                    >
+                      {({ deg }) => (
+                        <Icon
+                          name="chevronright"
+                          ml="auto"
+                          size={12}
+                          style={{ transform: `rotate(${deg}deg)` }}
+                        />
+                      )}
+                    </Motion>
+                  </Flex>
+                </Box>
+              ) : (
+                <Link
+                  to="/"
+                  data-metabase-event={"Navbar;Logo"}
+                  className="LogoNavItem NavItem cursor-pointer relative z2 transition-background justify-center"
+                >
+                  <LogoIcon dark />
+                </Link>
+              )}
+            </Box>
+            <Box className="relative full-height">
+              <Motion
+                defaultStyle={{ top: 0 }}
+                style={{ top: this.state.showRoot ? spring(1000) : spring(0) }}
+              >
+                {({ top }) => (
+                  <Box
+                    px={2}
+                    bg="#509ee3"
+                    pt={2}
+                    style={{ transform: `translateY(${top}px)` }}
+                    className="relative full-height z4"
+                  >
+                    <Box mb={1}>
+                      <EntityObjectLoader
+                        entityType="collections"
+                        entityId={this.props.params.collectionId}
+                      >
+                        {({ object }) => object && <h2>{object.name}</h2>}
+                      </EntityObjectLoader>
+                    </Box>
+                    <EntityListLoader
+                      entityType="search"
+                      entityQuery={(state, props) => ({
+                        collection: this.props.params.collectionId,
+                      })}
+                      wrapped
+                    >
+                      {({ list, collection }) => {
+                        console.log(list, collection);
+                        return (
+                          <Box>
+                            {list
+                              .filter(i => i.model === "collection")
+                              .map(c => (
+                                <Link to={Urls.collection(c.id)} mb={1}>
+                                  <Flex
+                                    align="center"
+                                    bg="rgba(255, 255, 255, 0.16)"
+                                    p={1}
+                                    style={{ borderRadius: 6 }}
+                                  >
+                                    <Icon name="all" mr={1} />
+                                    <h3>{c.name}</h3>
+                                  </Flex>
+                                </Link>
+                              ))}
+                          </Box>
+                        );
+                      }}
+                    </EntityListLoader>
+                  </Box>
+                )}
+              </Motion>
+              <Box
+                p={2}
+                bg="#2D86D4"
+                className="absolute top left bottom right z2 "
+              >
+                <Link to="/">
+                  <Flex align="center">
+                    <Icon name="all" mr={1} />
+                    <h3>Home</h3>
+                  </Flex>
+                </Link>
+                <CollectionListLoader>
+                  {({ list }) =>
+                    list.map(l => (
+                      <EntityObjectLoader
+                        entityType="collections"
+                        entityId={l.id}
+                      >
+                        {({ object }) => {
+                          console.log(object);
+                          if (object.effective_ancestors.length > 0) {
+                            return false;
+                          }
+                          return (
+                            <Link to={Urls.collection(l.id)} px={1}>
+                              <Flex align="center">
+                                <Icon name="all" mr={1} />
+                                <h3>{l.name}</h3>
+                              </Flex>
+                            </Link>
+                          );
+                        }}
+                      </EntityObjectLoader>
+                    ))
+                  }
+                </CollectionListLoader>
+              </Box>
+              )}
+            </Box>
+            {/*
         <Link to="question/new" mx={1}>
           <Button medium color="#509ee3">
             New question
@@ -351,7 +417,9 @@ export default class Navbar extends Component {
         </Tooltip>
         <ProfileLink {...this.props} />
         */}
-      </Box>
+          </Box>
+        )}
+      </Motion>
     );
   }
 
