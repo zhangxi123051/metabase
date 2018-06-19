@@ -165,18 +165,7 @@ class DefaultLanding extends React.Component {
       collectionId === "root" || collections.length > 0;
 
     return (
-      <Flex>
-        {showCollectionList && (
-          <Box w={1 / 3} mr={3}>
-            <Box>
-              <h4>{t`Collections`}</h4>
-            </Box>
-            <CollectionList
-              collections={collections}
-              isRoot={collectionId === "root"}
-            />
-          </Box>
-        )}
+      <Box>
         <Box w={2 / 3}>
           <Box>
             {pinned.length === 0 && unpinned.length === 0 ? (
@@ -348,7 +337,7 @@ class DefaultLanding extends React.Component {
             </Modal>
           )}
         <ItemsDragLayer selected={selected} />
-      </Flex>
+      </Box>
     );
   }
 }

@@ -57,9 +57,11 @@ export default class App extends Component {
     }
 
     return (
-      <div className="relative">
+      <div className="relative flex full-height">
         <Navbar location={location} />
-        {errorPage ? getErrorComponent(errorPage) : children}
+        <div className="flex-full">
+          {errorPage ? getErrorComponent(errorPage) : children}
+        </div>
         <UndoListing />
       </div>
     );

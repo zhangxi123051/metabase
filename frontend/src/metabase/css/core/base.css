@@ -26,6 +26,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+#root {
+  height: 100%;
+}
+
 /*
   override default padding and margin on lists
   in most cases we won't be using list-style so

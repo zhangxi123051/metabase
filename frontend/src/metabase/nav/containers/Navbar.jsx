@@ -5,9 +5,12 @@ import { t } from "c-3po";
 import { Box, Flex } from "grid-styled";
 import styled from "styled-components";
 import { space, width } from "styled-system";
+import * as Urls from "metabase/lib/urls";
 
 import { connect } from "react-redux";
 import { push } from "react-router-redux";
+import { withRouter } from "react-router";
+import { Motion, spring } from "react-motion";
 
 import Button from "metabase/components/Button.jsx";
 import Icon from "metabase/components/Icon.jsx";
@@ -17,6 +20,11 @@ import Tooltip from "metabase/components/Tooltip";
 import OnClickOutsideWrapper from "metabase/components/OnClickOutsideWrapper";
 
 import ProfileLink from "metabase/nav/components/ProfileLink.jsx";
+
+import CollectionListLoader from "metabase/containers/CollectionListLoader";
+import CollectionItemsLoader from "metabase/containers/CollectionItemsLoader";
+import EntityObjectLoader from "metabase/entities/containers/EntityObjectLoader";
+import EntityListLoader from "metabase/entities/containers/EntityListLoader";
 
 import { getPath, getContext, getUser } from "../selectors";
 
@@ -123,10 +131,12 @@ class SearchBar extends React.Component {
   }
 }
 
+@withRouter
 @connect(mapStateToProps, mapDispatchToProps)
 export default class Navbar extends Component {
   state = {
     modal: null,
+    showRoot: false,
   };
 
   static propTypes = {
@@ -216,54 +226,132 @@ export default class Navbar extends Component {
     );
   }
 
+  componentWillUpdate(nextProps) {
+    if (nextProps.params.collectionId !== this.props.params.collectionId) {
+      this.setState({ showRoot: false });
+    }
+  }
+
   renderMainNav() {
     return (
-      <Flex className="Nav relative bg-brand text-white z4" align="center">
-        <Box>
-          <Link
-            to="/"
-            data-metabase-event={"Navbar;Logo"}
-            className="LogoNavItem NavItem cursor-pointer relative z2 flex align-center transition-background justify-center"
-          >
-            <LogoIcon dark />
-          </Link>
-        </Box>
-        <Flex
-          className="absolute top left right bottom z1"
-          px={4}
-          align="center"
-        >
-          <Box w={2 / 3}>
-            <SearchBar
-              location={this.props.location}
-              onChangeLocation={this.props.onChangeLocation}
-            />
-          </Box>
-        </Flex>
-        <Flex align="center" ml="auto" className="z4">
-          <Link to="question/new" mx={1}>
-            <Button medium color="#509ee3">
-              New question
-            </Button>
-          </Link>
-          <Link to="collection/root" mx={1}>
-            <Box p={1} bg="#69ABE6" className="text-bold rounded">
-              Saved items
+      <Box
+        className="Nav relative bg-brand text-white z4 flex-no-shrink"
+        w={320}
+      >
+        <Box p={2}>
+          {this.props.params.collectionId ? (
+            <Box
+              onClick={() => this.setState({ showRoot: !this.state.showRoot })}
+            >
+              <Flex align="center" py={1}>
+                <LogoIcon dark />
+                <h4>Metabase</h4>
+                <Icon name="chevronright" ml="auto" size={12} />
+              </Flex>
             </Box>
+          ) : (
+            <Link
+              to="/"
+              data-metabase-event={"Navbar;Logo"}
+              className="LogoNavItem NavItem cursor-pointer relative z2 transition-background justify-center"
+            >
+              <LogoIcon dark />
+            </Link>
+          )}
+        </Box>
+        <Box className="relative full-height">
+          <Motion
+            defaultStyle={{ top: 0 }}
+            style={{ top: this.state.showRoot ? spring(1000) : spring(0) }}
+          >
+            {({ top }) => (
+              <Box
+                px={2}
+                bg="#509ee3"
+                style={{ transform: `translateY(${top}px)` }}
+                className="relative full-height z4"
+              >
+                <EntityObjectLoader
+                  entityType="collections"
+                  entityId={this.props.params.collectionId}
+                >
+                  {({ object }) => <h2>{object.name}</h2>}
+                </EntityObjectLoader>
+                <EntityListLoader
+                  entityType="search"
+                  entityQuery={(state, props) => ({
+                    collection: this.props.params.collectionId,
+                  })}
+                  wrapped
+                >
+                  {({ list, collection }) => {
+                    console.log(list, collection);
+                    return (
+                      <Box p={2}>
+                        {list.filter(i => i.model === "collection").map(c => (
+                          <Link to={Urls.collection(c.id)}>
+                            <Flex align="center">
+                              <Icon name="all" mr={1} />
+                              <h3>{c.name}</h3>
+                            </Flex>
+                          </Link>
+                        ))}
+                      </Box>
+                    );
+                  }}
+                </EntityListLoader>
+              </Box>
+            )}
+          </Motion>
+          <Box
+            px={2}
+            bg="#2D86D4"
+            className="absolute top left bottom right z2 "
+          >
+            <CollectionListLoader>
+              {({ list }) =>
+                list.map(l => (
+                  <EntityObjectLoader entityType="collections" entityId={l.id}>
+                    {({ object }) => {
+                      console.log(object);
+                      if (object.effective_ancestors.length > 0) {
+                        return false;
+                      }
+                      return (
+                        <Link to={Urls.collection(l.id)} px={1}>
+                          <Flex align="center">
+                            <Icon name="all" mr={1} />
+                            <h3>{l.name}</h3>
+                          </Flex>
+                        </Link>
+                      );
+                    }}
+                  </EntityObjectLoader>
+                ))
+              }
+            </CollectionListLoader>
+          </Box>
+          )}
+        </Box>
+        {/*
+        <Link to="question/new" mx={1}>
+          <Button medium color="#509ee3">
+            New question
+          </Button>
+        </Link>
+        <Tooltip tooltip={t`Reference`}>
+          <Link to="reference" mx={1}>
+            <Icon name="reference" />
           </Link>
-          <Tooltip tooltip={t`Reference`}>
-            <Link to="reference" mx={1}>
-              <Icon name="reference" />
-            </Link>
-          </Tooltip>
-          <Tooltip tooltip={t`Activity`}>
-            <Link to="activity" mx={1}>
-              <Icon name="alert" />
-            </Link>
-          </Tooltip>
-          <ProfileLink {...this.props} />
-        </Flex>
-      </Flex>
+        </Tooltip>
+        <Tooltip tooltip={t`Activity`}>
+          <Link to="activity" mx={1}>
+            <Icon name="alert" />
+          </Link>
+        </Tooltip>
+        <ProfileLink {...this.props} />
+        */}
+      </Box>
     );
   }
 
