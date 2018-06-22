@@ -33,7 +33,8 @@
             [metabase.util.date :as du]
             [toucan
              [db :as db]
-             [models :as models]]))
+             [models :as models]])
+  (:import java.util.UUID))
 
 ;;; # Migration Helpers
 
@@ -367,3 +368,11 @@
                            :special_type     (mdb/isa :type/Category)
                            :active           true}
     :has_field_values "list"))
+
+;; Before 0.30.0, we were storing the LDAP user's password in the `core_user` table (though it wasn't used).  This
+;; migration clears those passwords and replaces them with a UUID. This is similar to a new account setup, or how we
+;; disable passwords for Google authenticated users
+(defmigration ^{:author "senior", :added "0.30.0"} clear-ldap-user-local-passwords
+  (db/transaction
+    (doseq [user (db/select [User :id] :ldap_auth [:= true])]
+      (db/update! User (u/get-id user) :password (str (UUID/randomUUID))))))
