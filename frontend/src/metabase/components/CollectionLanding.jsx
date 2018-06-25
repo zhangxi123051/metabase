@@ -166,17 +166,6 @@ class DefaultLanding extends React.Component {
 
     return (
       <Flex>
-        {showCollectionList && (
-          <Box w={1 / 3} mr={3}>
-            <Box>
-              <h4>{t`Collections`}</h4>
-            </Box>
-            <CollectionList
-              collections={collections}
-              isRoot={collectionId === "root"}
-            />
-          </Box>
-        )}
         <Box w={2 / 3}>
           <Box>
             {pinned.length === 0 && unpinned.length === 0 ? (
@@ -476,7 +465,9 @@ class CollectionLanding extends React.Component {
     return (
       <Box mx={4}>
         <Box>
-          <Flex align="center">
+          <Flex align="center" my={2}>
+            <h1>{currentCollection.name}</h1>
+            {/*
             <BrowserCrumbs
               crumbs={[
                 ...ancestors.map(({ id, name }) => ({
@@ -489,7 +480,8 @@ class CollectionLanding extends React.Component {
                 })),
                 { title: currentCollection.name },
               ]}
-            />
+            />A
+            */}
 
             <Flex ml="auto">
               {currentCollection &&

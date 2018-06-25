@@ -5,10 +5,15 @@ import { t } from "c-3po";
 import { Box, Flex } from "grid-styled";
 import styled from "styled-components";
 import { space, width } from "styled-system";
-
+import { withRouter } from "react-router";
+import _ from "underscore";
 import { connect } from "react-redux";
 import { push } from "react-router-redux";
 
+import { entityListLoader } from "metabase/entities/containers/EntityListLoader";
+import EntityObjectLoader from "metabase/entities/containers/EntityObjectLoader";
+
+import { ROOT_COLLECTION } from "metabase/entities/collections";
 import Button from "metabase/components/Button.jsx";
 import Icon from "metabase/components/Icon.jsx";
 import Link from "metabase/components/Link";
@@ -19,6 +24,8 @@ import OnClickOutsideWrapper from "metabase/components/OnClickOutsideWrapper";
 import ProfileLink from "metabase/nav/components/ProfileLink.jsx";
 
 import { getPath, getContext, getUser } from "../selectors";
+
+import * as Urls from "metabase/lib/urls";
 
 const mapStateToProps = (state, props) => ({
   path: getPath(state, props),
@@ -228,6 +235,7 @@ export default class Navbar extends Component {
             <LogoIcon dark />
           </Link>
         </Box>
+        {/*
         <Flex
           className="absolute top left right bottom z1"
           px={4}
@@ -240,17 +248,19 @@ export default class Navbar extends Component {
             />
           </Box>
         </Flex>
+        */}
+        <CollectionNav />
         <Flex align="center" ml="auto" className="z4">
           <Link to="question/new" mx={1}>
             <Button medium color="#509ee3">
               New question
             </Button>
           </Link>
-          <Link to="collection/root" mx={1}>
-            <Box p={1} bg="#69ABE6" className="text-bold rounded">
-              Saved items
-            </Box>
-          </Link>
+          <Tooltip tooltip={t`Search for questions, dashboards and more`}>
+            <Link to="reference" mx={1}>
+              <Icon name="search" />
+            </Link>
+          </Tooltip>
           <Tooltip tooltip={t`Reference`}>
             <Link to="reference" mx={1}>
               <Icon name="reference" />
@@ -261,7 +271,9 @@ export default class Navbar extends Component {
               <Icon name="alert" />
             </Link>
           </Tooltip>
+          {/*
           <ProfileLink {...this.props} />
+          */}
         </Flex>
       </Flex>
     );
@@ -286,5 +298,94 @@ export default class Navbar extends Component {
       default:
         return this.renderMainNav();
     }
+  }
+}
+
+@withRouter
+@entityListLoader({
+  entityType: "search",
+  entityQuery: (state, props) => ({ collection: props.params.collectionId }),
+  wrapped: true,
+})
+@connect((state, props) => {
+  // split out collections, pinned, and unpinned since bulk actions only apply to unpinned
+  const [collections, items] = _.partition(
+    props.list,
+    item => item.model === "collection",
+  );
+  return {
+    collections,
+    currentUser: state.currentUser,
+    currentCollection: props.object,
+  };
+})
+class CollectionNav extends React.Component {
+  render() {
+    const { collections, currentUser, params: { collectionId } } = this.props;
+
+    const isRoot = collectionId === "root";
+    return (
+      <Flex align="center" py={2}>
+        {collectionId && (
+          <Flex align="center">
+            {collectionId && (
+              <EntityObjectLoader
+                entityType="collections"
+                entityId={collectionId}
+              >
+                {({ object }) => {
+                  const currentCollection = object;
+                  const ancestors =
+                    !isRoot &&
+                    currentCollection &&
+                    currentCollection.effective_ancestors
+                      ? [
+                          ROOT_COLLECTION,
+                          ...currentCollection.effective_ancestors,
+                        ]
+                      : [];
+                  return (
+                    <Box>
+                      {ancestors
+                        ? ancestors.map(a => (
+                            <Flex align="center">
+                              <Link mx={1} to={Urls.collection(a.id)}>
+                                {a.name}
+                              </Link>
+                              <Icon name="chevronright" />
+                              <Link to="">{currentCollection.name}</Link>
+                            </Flex>
+                          ))
+                        : "Saved"}
+                    </Box>
+                  );
+                }}
+              </EntityObjectLoader>
+            )}
+            {collections && <Icon name="chevronright" />}
+            {collections
+              .filter(c => c.id !== currentUser.personal_collection_id)
+              .map(
+                c =>
+                  !c.personal_owner_id && (
+                    <Link mx={1} to={Urls.collection(c.id)}>
+                      {c.name}
+                    </Link>
+                  ),
+              )}
+          </Flex>
+        )}
+        {!collectionId && (
+          <span>
+            <Link to={Urls.collection()} mx={1}>
+              Saved items
+            </Link>
+            <Link to={"browse"} mx={1}>
+              Data
+            </Link>
+          </span>
+        )}
+      </Flex>
+    );
   }
 }
