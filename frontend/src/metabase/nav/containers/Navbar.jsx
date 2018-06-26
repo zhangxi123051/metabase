@@ -355,7 +355,10 @@ class CollectionNav extends React.Component {
                           title: name,
                           to: Urls.collection(id),
                         })),
-                        { title: currentCollection.name },
+                        {
+                          title: currentCollection.name,
+                          to: Urls.collection(currentCollection.id),
+                        },
                       ]}
                     />
                   );
@@ -371,21 +374,21 @@ class CollectionNav extends React.Component {
                 c =>
                   !c.personal_owner_id && (
                     <Link mx={1} to={Urls.collection(c.id)}>
-                      {c.name}
+                      <h4 className="text-brand-hover">{c.name}</h4>
                     </Link>
                   ),
               )}
           </Flex>
         )}
         {!collectionId && (
-          <span>
+          <Flex align="center">
             <Link to={Urls.collection()} mx={1}>
-              Saved items
+              <h4 className="text-brand-hover">Saved items</h4>
             </Link>
             <Link to={"browse"} mx={1}>
-              Data
+              <h4 className="text-brand-hover">Data</h4>
             </Link>
-          </span>
+          </Flex>
         )}
       </Flex>
     );
