@@ -225,14 +225,18 @@ export default class Navbar extends Component {
 
   renderMainNav() {
     return (
-      <Flex className="Nav relative bg-brand text-white z4" align="center">
+      <Flex
+        className="Nav bg-white border-bottom relative z4"
+        py={2}
+        align="center"
+      >
         <Box>
           <Link
             to="/"
             data-metabase-event={"Navbar;Logo"}
             className="LogoNavItem NavItem cursor-pointer relative z2 flex align-center transition-background justify-center"
           >
-            <LogoIcon dark />
+            <LogoIcon />
           </Link>
         </Box>
         {/*
@@ -345,24 +349,22 @@ class CollectionNav extends React.Component {
                         ]
                       : [];
                   return (
-                    <Box>
-                      {ancestors
-                        ? ancestors.map(a => (
-                            <Flex align="center">
-                              <Link mx={1} to={Urls.collection(a.id)}>
-                                {a.name}
-                              </Link>
-                              <Icon name="chevronright" />
-                              <Link to="">{currentCollection.name}</Link>
-                            </Flex>
-                          ))
-                        : "Saved"}
-                    </Box>
+                    <NavCrumbs
+                      crumbs={[
+                        ...ancestors.map(({ id, name }) => ({
+                          title: name,
+                          to: Urls.collection(id),
+                        })),
+                        { title: currentCollection.name },
+                      ]}
+                    />
                   );
                 }}
               </EntityObjectLoader>
             )}
-            {collections && <Icon name="chevronright" />}
+            {collections.length > 0 && (
+              <Icon name="chevronright" mx={2} color="#DCE1E4" />
+            )}
             {collections
               .filter(c => c.id !== currentUser.personal_collection_id)
               .map(
@@ -389,3 +391,31 @@ class CollectionNav extends React.Component {
     );
   }
 }
+
+const BrowseHeader = ({ children }) => (
+  <h4 className="text-brand">{children}</h4>
+);
+
+const NavCrumbs = ({ crumbs }) => {
+  return (
+    <Flex align="center">
+      {crumbs.filter(c => c).map((crumb, index, crumbs) => [
+        crumb.to ? (
+          <Link key={"title" + index} to={crumb.to}>
+            <BrowseHeader>{crumb.title}</BrowseHeader>
+          </Link>
+        ) : (
+          <BrowseHeader>{crumb.title}</BrowseHeader>
+        ),
+        index < crumbs.length - 1 ? (
+          <Icon
+            key={"divider" + index}
+            name="chevronright"
+            mx={2}
+            color="#DCE1E4"
+          />
+        ) : null,
+      ])}
+    </Flex>
+  );
+};
