@@ -105,7 +105,7 @@ class SearchBar extends React.Component {
             w={1}
             p={2}
             value={this.state.searchText}
-            placeholder="Search for anything..."
+            placeholder="Search for dashboards, questions, and more..."
             onClick={() => this.setState({ active: true })}
             onChange={e => this.setState({ searchText: e.target.value })}
             onKeyPress={e => {
