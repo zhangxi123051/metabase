@@ -1,32 +1,43 @@
 (ns metabase.models.collection-test
   (:refer-clojure :exclude [ancestors descendants])
-  (:require [clojure.string :as str]
+  (:require [clojure
+             [string :as str]
+             [test :refer :all]]
             [expectations :refer :all]
+            [medley.core :as m]
             [metabase.api.common :refer [*current-user-id* *current-user-permissions-set*]]
             [metabase.models
              [card :refer [Card]]
              [collection :as collection :refer [Collection]]
+             [collection-revision :refer [CollectionRevision]]
              [dashboard :refer [Dashboard]]
-             [permissions :refer [Permissions] :as perms]
+             [permissions :as perms :refer [Permissions]]
              [permissions-group :as group :refer [PermissionsGroup]]
              [pulse :refer [Pulse]]
              [user :refer [User]]]
+            [metabase.test
+             [fixtures :as fixtures]
+             [util :as tu]]
             [metabase.test.data.users :as test-users]
-            [metabase.test.util :as tu]
             [metabase.util :as u]
-            [toucan.db :as db]
+            [toucan
+             [db :as db]
+             [hydrate :refer [hydrate]]]
             [toucan.util.test :as tt]))
 
-(defn force-create-personal-collections!
-  "Force the creation of the Personal Collections for our various test users. They are eventually going to get
-  automatically created anyway as soon as those Users' permissions get calculated in `user/permissions-set`; better to
-  do it now so the test results will be consistent."
-  []
-  (doseq [username [:rasta :lucky :crowberto :trashbird]]
-    (collection/user->personal-collection (test-users/user->id username))))
+(use-fixtures :once (fixtures/initialize :db :test-users :test-users-personal-collections))
 
 (defn- lucky-collection-children-location []
   (collection/children-location (collection/user->personal-collection (test-users/user->id :lucky))))
+
+(defn- replace-collection-ids
+  "In Collection perms `graph`, replace instances of the ID of `collection-or-id` with `:COLLECTION`, making it possible
+  to write tests that don't need to know its actual numeric ID."
+  [collection-or-id graph]
+  (update graph :groups (partial m/map-vals (partial m/map-keys (fn [collection-id]
+                                                                  (if (= collection-id (u/get-id collection-or-id))
+                                                                    :COLLECTION
+                                                                    collection-id))))))
 
 ;; test that we can create a new Collection with valid inputs
 (expect
@@ -40,12 +51,16 @@
   (tt/with-temp Collection [collection {:name "My Favorite Cards", :color "#ABCDEF"}]
     (dissoc collection :id)))
 
-;; check that the color is validated
-(expect Exception (db/insert! Collection {:name "My Favorite Cards"}))                    ; missing color
-(expect Exception (db/insert! Collection {:name "My Favorite Cards", :color "#ABC"}))     ; too short
-(expect Exception (db/insert! Collection {:name "My Favorite Cards", :color "#BCDEFG"}))  ; invalid chars
-(expect Exception (db/insert! Collection {:name "My Favorite Cards", :color "#ABCDEFF"})) ; too long
-(expect Exception (db/insert! Collection {:name "My Favorite Cards", :color "ABCDEF"}))   ; missing hash prefix
+(deftest color-validation-test
+  (testing "Collection colors should be validated when inserted into the DB"
+    (are [test-msg input] (is (thrown? Exception
+                                       (db/insert! Collection {:name "My Favorite Cards", :color input}))
+                              test-msg)
+      "Missing color"       nil
+      "Too short"           #"ABC"
+      "Invalid chars"       "#BCDEFG"
+      "Too long"            #"ABCDEFF"
+      "Missing hash prefix" "ABCDEF")))
 
 ;; double-check that `with-temp-defaults` are working correctly for Collection
 (expect
@@ -111,10 +126,15 @@
 ;;; |                                                  Graph Tests                                                   |
 ;;; +----------------------------------------------------------------------------------------------------------------+
 
-(defn- graph [& {:keys [clear-revisions?]}]
-  ;; delete any previously existing collection revision entries so we get revision = 0
+(defn- clear-graph-revisions! []
+  (db/delete! CollectionRevision))
+
+(defn- graph
+  "Fetch collection graph. `:clear-revisions?` = delete any previously existing collection revision entries so we get
+  revision = 0."
+  [& {:keys [clear-revisions?]}]
   (when clear-revisions?
-    (db/delete! 'CollectionRevision))
+    (clear-graph-revisions!))
   ;; force lazy creation of the three magic groups as needed
   (group/all-users)
   (group/admin)
@@ -128,35 +148,40 @@
    :groups   {(u/get-id (group/all-users)) {:root :none}
               (u/get-id (group/metabot))   {:root :none}
               (u/get-id (group/admin))     {:root :write}}}
-  (graph :clear-revisions? true))
+  (tu/with-non-admin-groups-no-root-collection-perms
+    (graph :clear-revisions? true)))
 
 ;; Creating a new Collection shouldn't give perms to anyone but admins
-(tt/expect-with-temp [Collection [collection]]
+(expect
   {:revision 0
-   :groups   {(u/get-id (group/all-users)) {:root :none,  (u/get-id collection) :none}
-              (u/get-id (group/metabot))   {:root :none,  (u/get-id collection) :none}
-              (u/get-id (group/admin))     {:root :write, (u/get-id collection) :write}}}
-  (graph :clear-revisions? true))
+   :groups   {(u/get-id (group/all-users)) {:root :none,  :COLLECTION :none}
+              (u/get-id (group/metabot))   {:root :none,  :COLLECTION :none}
+              (u/get-id (group/admin))     {:root :write, :COLLECTION :write}}}
+  (tu/with-non-admin-groups-no-root-collection-perms
+    (tt/with-temp Collection [collection]
+      (replace-collection-ids collection (graph :clear-revisions? true)))))
 
 ;; make sure read perms show up correctly
-(tt/expect-with-temp [Collection [collection]]
+(expect
   {:revision 0
-   :groups   {(u/get-id (group/all-users)) {:root :none,  (u/get-id collection) :read}
-              (u/get-id (group/metabot))   {:root :none,  (u/get-id collection) :none}
-              (u/get-id (group/admin))     {:root :write, (u/get-id collection) :write}}}
-  (do
-    (perms/grant-collection-read-permissions! (group/all-users) collection)
-    (graph :clear-revisions? true)))
+   :groups   {(u/get-id (group/all-users)) {:root :none,  :COLLECTION :read}
+              (u/get-id (group/metabot))   {:root :none,  :COLLECTION :none}
+              (u/get-id (group/admin))     {:root :write, :COLLECTION :write}}}
+  (tu/with-non-admin-groups-no-root-collection-perms
+    (tt/with-temp Collection [collection]
+      (perms/grant-collection-read-permissions! (group/all-users) collection)
+      (replace-collection-ids collection (graph :clear-revisions? true)))))
 
 ;; make sure we can grant write perms for new collections (!)
-(tt/expect-with-temp [Collection [collection]]
+(expect
   {:revision 0
-   :groups   {(u/get-id (group/all-users)) {:root :none,  (u/get-id collection) :write}
-              (u/get-id (group/metabot))   {:root :none,  (u/get-id collection) :none}
-              (u/get-id (group/admin))     {:root :write, (u/get-id collection) :write}}}
-  (do
-    (perms/grant-collection-readwrite-permissions! (group/all-users) collection)
-    (graph :clear-revisions? true)))
+   :groups   {(u/get-id (group/all-users)) {:root :none,  :COLLECTION :write}
+              (u/get-id (group/metabot))   {:root :none,  :COLLECTION :none}
+              (u/get-id (group/admin))     {:root :write, :COLLECTION :write}}}
+  (tu/with-non-admin-groups-no-root-collection-perms
+    (tt/with-temp Collection [collection]
+      (perms/grant-collection-readwrite-permissions! (group/all-users) collection)
+      (replace-collection-ids collection (graph :clear-revisions? true)))))
 
 ;; make sure a non-magical group will show up
 (tt/expect-with-temp [PermissionsGroup [new-group]]
@@ -165,7 +190,8 @@
               (u/get-id (group/metabot))   {:root :none}
               (u/get-id (group/admin))     {:root :write}
               (u/get-id new-group)         {:root :none}}}
-  (graph :clear-revisions? true))
+  (tu/with-non-admin-groups-no-root-collection-perms
+    (graph :clear-revisions? true)))
 
 ;; How abut *read* permissions for the Root Collection?
 (tt/expect-with-temp [PermissionsGroup [new-group]]
@@ -174,7 +200,7 @@
               (u/get-id (group/metabot))   {:root :none}
               (u/get-id (group/admin))     {:root :write}
               (u/get-id new-group)         {:root :read}}}
-  (do
+  (tu/with-non-admin-groups-no-root-collection-perms
     (perms/grant-collection-read-permissions! new-group collection/root-collection)
     (graph :clear-revisions? true)))
 
@@ -185,7 +211,7 @@
               (u/get-id (group/metabot))   {:root :none}
               (u/get-id (group/admin))     {:root :write}
               (u/get-id new-group)         {:root :write}}}
-  (do
+  (tu/with-non-admin-groups-no-root-collection-perms
     (perms/grant-collection-readwrite-permissions! new-group collection/root-collection)
     (graph :clear-revisions? true)))
 
@@ -197,46 +223,59 @@
               (u/get-id (group/metabot))   {:root :none}
               (u/get-id (group/admin))     {:root :write}}}
   ;; need to bind *current-user-id* or the Revision won't get updated
-  (binding [*current-user-id* (test-users/user->id :crowberto)]
-    (collection/update-graph! (graph :clear-revisions? true))
-    (graph)))
+  (do
+    (clear-graph-revisions!)
+    (tu/with-non-admin-groups-no-root-collection-perms
+      (binding [*current-user-id* (test-users/user->id :crowberto)]
+        (collection/update-graph! (graph :clear-revisions? true))
+        (graph)))))
 
 ;; Can we give someone read perms via the graph?
-(tt/expect-with-temp [Collection [collection]]
+(expect
   {:revision 1
-   :groups   {(u/get-id (group/all-users)) {:root :none,  (u/get-id collection) :read}
-              (u/get-id (group/metabot))   {:root :none,  (u/get-id collection) :none}
-              (u/get-id (group/admin))     {:root :write, (u/get-id collection) :write}}}
-  (binding [*current-user-id* (test-users/user->id :crowberto)]
-    (collection/update-graph! (assoc-in (graph :clear-revisions? true)
-                                        [:groups (u/get-id (group/all-users)) (u/get-id collection)]
-                                        :read))
-    (graph)))
+   :groups   {(u/get-id (group/all-users)) {:root :none,  :COLLECTION :read}
+              (u/get-id (group/metabot))   {:root :none,  :COLLECTION :none}
+              (u/get-id (group/admin))     {:root :write, :COLLECTION :write}}}
+  (do
+    (clear-graph-revisions!)
+    (tu/with-non-admin-groups-no-root-collection-perms
+      (tt/with-temp Collection [collection]
+        (binding [*current-user-id* (test-users/user->id :crowberto)]
+          (collection/update-graph! (assoc-in (graph :clear-revisions? true)
+                                              [:groups (u/get-id (group/all-users)) (u/get-id collection)]
+                                              :read))
+          (replace-collection-ids collection (graph)))))))
 
 ;; can we give them *write* perms?
-(tt/expect-with-temp [Collection [collection]]
-  {:revision 1
-   :groups   {(u/get-id (group/all-users)) {:root :none,  (u/get-id collection) :write}
-              (u/get-id (group/metabot))   {:root :none,  (u/get-id collection) :none}
-              (u/get-id (group/admin))     {:root :write, (u/get-id collection) :write}}}
-  (binding [*current-user-id* (test-users/user->id :crowberto)]
-    (collection/update-graph! (assoc-in (graph :clear-revisions? true)
-                                        [:groups (u/get-id (group/all-users)) (u/get-id collection)]
-                                        :write))
-    (graph)))
+(expect
+ {:revision 1
+  :groups   {(u/get-id (group/all-users)) {:root :none,  :COLLECTION :write}
+             (u/get-id (group/metabot))   {:root :none,  :COLLECTION :none}
+             (u/get-id (group/admin))     {:root :write, :COLLECTION :write}}}
+ (tu/with-non-admin-groups-no-root-collection-perms
+   (tt/with-temp Collection [collection]
+     (binding [*current-user-id* (test-users/user->id :crowberto)]
+       (collection/update-graph! (assoc-in (graph :clear-revisions? true)
+                                           [:groups (u/get-id (group/all-users)) (u/get-id collection)]
+                                           :write))
+       (replace-collection-ids collection (graph))))))
 
 ;; can we *revoke* perms?
-(tt/expect-with-temp [Collection [collection]]
+(expect
   {:revision 1
-   :groups   {(u/get-id (group/all-users)) {:root :none,  (u/get-id collection) :none}
-              (u/get-id (group/metabot))   {:root :none,  (u/get-id collection) :none}
-              (u/get-id (group/admin))     {:root :write, (u/get-id collection) :write}}}
-  (binding [*current-user-id* (test-users/user->id :crowberto)]
-    (perms/grant-collection-read-permissions! (group/all-users) collection)
-    (collection/update-graph! (assoc-in (graph :clear-revisions? true)
-                                        [:groups (u/get-id (group/all-users)) (u/get-id collection)]
-                                        :none))
-    (graph)))
+   :groups   {(u/get-id (group/all-users)) {:root :none,  :COLLECTION :none}
+              (u/get-id (group/metabot))   {:root :none,  :COLLECTION :none}
+              (u/get-id (group/admin))     {:root :write, :COLLECTION :write}}}
+  (do
+    (clear-graph-revisions!)
+    (tu/with-non-admin-groups-no-root-collection-perms
+      (tt/with-temp Collection [collection]
+        (binding [*current-user-id* (test-users/user->id :crowberto)]
+          (perms/grant-collection-read-permissions! (group/all-users) collection)
+          (collection/update-graph! (assoc-in (graph :clear-revisions? true)
+                                              [:groups (u/get-id (group/all-users)) (u/get-id collection)]
+                                              :none))
+          (replace-collection-ids collection (graph)))))))
 
 ;; How abut *read* permissions for the Root Collection?
 (tt/expect-with-temp [PermissionsGroup [new-group]]
@@ -245,11 +284,14 @@
               (u/get-id (group/metabot))   {:root :none}
               (u/get-id (group/admin))     {:root :write}
               (u/get-id new-group)         {:root :read}}}
-  (binding [*current-user-id* (test-users/user->id :crowberto)]
-    (collection/update-graph! (assoc-in (graph :clear-revisions? true)
-                                        [:groups (u/get-id new-group) :root]
-                                        :read))
-    (graph)))
+  (do
+    (clear-graph-revisions!)
+    (tu/with-non-admin-groups-no-root-collection-perms
+      (binding [*current-user-id* (test-users/user->id :crowberto)]
+        (collection/update-graph! (assoc-in (graph :clear-revisions? true)
+                                            [:groups (u/get-id new-group) :root]
+                                            :read))
+        (graph)))))
 
 ;; How about granting *write* permissions for the Root Collection?
 (tt/expect-with-temp [PermissionsGroup [new-group]]
@@ -258,11 +300,14 @@
               (u/get-id (group/metabot))   {:root :none}
               (u/get-id (group/admin))     {:root :write}
               (u/get-id new-group)         {:root :write}}}
-  (binding [*current-user-id* (test-users/user->id :crowberto)]
-    (collection/update-graph! (assoc-in (graph :clear-revisions? true)
-                                        [:groups (u/get-id new-group) :root]
-                                        :write))
-    (graph)))
+  (do
+    (clear-graph-revisions!)
+    (tu/with-non-admin-groups-no-root-collection-perms
+      (binding [*current-user-id* (test-users/user->id :crowberto)]
+        (collection/update-graph! (assoc-in (graph :clear-revisions? true)
+                                            [:groups (u/get-id new-group) :root]
+                                            :write))
+        (graph)))))
 
 ;; can we *revoke* RootCollection perms?
 (tt/expect-with-temp [PermissionsGroup [new-group]]
@@ -271,12 +316,15 @@
               (u/get-id (group/metabot))   {:root :none}
               (u/get-id (group/admin))     {:root :write}
               (u/get-id new-group)         {:root :none}}}
-  (binding [*current-user-id* (test-users/user->id :crowberto)]
-    (perms/grant-collection-readwrite-permissions! new-group collection/root-collection)
-    (collection/update-graph! (assoc-in (graph :clear-revisions? true)
-                                        [:groups (u/get-id new-group) :root]
-                                        :none))
-    (graph)))
+  (do
+    (clear-graph-revisions!)
+    (tu/with-non-admin-groups-no-root-collection-perms
+      (binding [*current-user-id* (test-users/user->id :crowberto)]
+        (perms/grant-collection-readwrite-permissions! new-group collection/root-collection)
+        (collection/update-graph! (assoc-in (graph :clear-revisions? true)
+                                            [:groups (u/get-id new-group) :root]
+                                            :none))
+        (graph)))))
 
 ;; Make sure that personal Collections *do not* appear in the Collections graph
 (expect
@@ -284,8 +332,7 @@
    :groups   {(u/get-id (group/all-users)) {:root :none}
               (u/get-id (group/metabot))   {:root :none}
               (u/get-id (group/admin))     {:root :write}}}
-  (do
-    (force-create-personal-collections!)
+  (tu/with-non-admin-groups-no-root-collection-perms
     (graph :clear-revisions? true)))
 
 ;; Make sure that if we try to be sneaky and edit a Personal Collection via the graph, an Exception is thrown
@@ -303,12 +350,14 @@
               (u/get-id (group/metabot))   {:root :none}
               (u/get-id (group/admin))     {:root :write}}}
   (do
-    (u/ignore-exceptions
-      (let [lucky-personal-collection-id (u/get-id (collection/user->personal-collection (test-users/user->id :lucky)))]
-        (collection/update-graph! (assoc-in (graph :clear-revisions? true)
-                                            [:groups (u/get-id (group/all-users)) lucky-personal-collection-id]
-                                            :read))))
-    (graph)))
+    (clear-graph-revisions!)
+    (tu/with-non-admin-groups-no-root-collection-perms
+      (u/ignore-exceptions
+        (let [lucky-personal-collection-id (u/get-id (collection/user->personal-collection (test-users/user->id :lucky)))]
+          (collection/update-graph! (assoc-in (graph :clear-revisions? true)
+                                              [:groups (u/get-id (group/all-users)) lucky-personal-collection-id]
+                                              :read))))
+      (graph))))
 
 ;; Make sure descendants of Personal Collections do not come back as part of the graph either...
 (expect
@@ -316,8 +365,11 @@
    :groups   {(u/get-id (group/all-users)) {:root :none}
               (u/get-id (group/metabot))   {:root :none}
               (u/get-id (group/admin))     {:root :write}}}
-  (tt/with-temp Collection [_ {:location (lucky-collection-children-location)}]
-    (graph)))
+  (do
+    (clear-graph-revisions!)
+    (tu/with-non-admin-groups-no-root-collection-perms
+      (tt/with-temp Collection [_ {:location (lucky-collection-children-location)}]
+        (graph)))))
 
 ;; ...and that you can't be sneaky and try to edit them either...
 (expect
@@ -337,14 +389,15 @@
 ;;; +----------------------------------------------------------------------------------------------------------------+
 
 (defn do-with-collection-hierarchy [a-fn]
-  (tt/with-temp* [Collection [a {:name "A"}]
-                  Collection [b {:name "B", :location (collection/location-path a)}]
-                  Collection [c {:name "C", :location (collection/location-path a)}]
-                  Collection [d {:name "D", :location (collection/location-path a c)}]
-                  Collection [e {:name "E", :location (collection/location-path a c d)}]
-                  Collection [f {:name "F", :location (collection/location-path a c)}]
-                  Collection [g {:name "G", :location (collection/location-path a c f)}]]
-    (a-fn {:a a, :b b, :c c, :d d, :e e, :f f, :g g})))
+  (tu/with-non-admin-groups-no-root-collection-perms
+    (tt/with-temp* [Collection [a {:name "A"}]
+                    Collection [b {:name "B", :location (collection/location-path a)}]
+                    Collection [c {:name "C", :location (collection/location-path a)}]
+                    Collection [d {:name "D", :location (collection/location-path a c)}]
+                    Collection [e {:name "E", :location (collection/location-path a c d)}]
+                    Collection [f {:name "F", :location (collection/location-path a c)}]
+                    Collection [g {:name "G", :location (collection/location-path a c f)}]]
+      (a-fn {:a a, :b b, :c c, :d d, :e e, :f f, :g g}))))
 
 (defmacro with-collection-hierarchy
   "Run `body` with a hierarchy of Collections that looks like:
@@ -396,16 +449,24 @@
 ;;; |                                       Nested Collections: Location Paths                                       |
 ;;; +----------------------------------------------------------------------------------------------------------------+
 
-;; Does our handy utility function for working with `location` paths work as expected?
-(expect "/1/2/3/" (collection/location-path 1 2 3))
-(expect "/"       (collection/location-path))
-(expect "/1/"     (collection/location-path {:id 1}))
-(expect "/1/2/3/" (collection/location-path {:id 1} {:id 2} {:id 3}))
-(expect "/1/337/" (collection/location-path 1 {:id 337}))
-(expect Exception (collection/location-path "1"))
-(expect Exception (collection/location-path nil))
-(expect Exception (collection/location-path -1))
-(expect Exception (collection/location-path 1 2 1)) ; shouldn't allow duplicates
+;;
+(deftest location-path-test
+  (testing "Does our handy utility function for working with `location` paths work as expected?"
+    (testing "valid input"
+      (are [expected args] (is (= expected
+                                  (apply collection/location-path args)))
+        "/1/2/3/" [1 2 3]
+        "/"       nil
+        "/1/"     [{:id 1}]
+        "/1/2/3/" [{:id 1} {:id 2} {:id 3}]
+        "/1/337/" [1 {:id 337}]))
+    (testing "invalid input"
+      (are [args] (thrown? Exception (apply collection/location-path args))
+        ["1"]
+        [nil]
+        [-1]
+        ;; shouldn't allow duplicates
+        [1 2 1]))))
 
 (expect [1 2 3]   (collection/location-path->ids "/1/2/3/"))
 (expect []        (collection/location-path->ids "/"))
@@ -456,6 +517,19 @@
    #{"/"
      "/db/2/native/"
      "/collection/9/read/"}))
+
+;; for the Root Collection we should return `"root"`
+(expect
+  #{8 9 "root"}
+  (collection/permissions-set->visible-collection-ids
+   #{"/collection/8/"
+     "/collection/9/read/"
+     "/collection/root/"}))
+
+(expect
+  #{"root"}
+  (collection/permissions-set->visible-collection-ids
+   #{"/collection/root/read/"}))
 
 ;; Can we calculate `effective-location-path`?
 (expect "/10/20/"    (collection/effective-location-path "/10/20/30/" #{10 20}))
@@ -852,15 +926,18 @@
 ;;           |
 ;;           +-> F -> G
 
-(defn- perms-path-ids->names
-  "Given a set of permissions and the `collections` map returned by the `with-collection-hierarchy` macro above, replace
-  the numeric IDs in the permissions paths with corresponding Collection names, making our tests easier to read."
+(defn perms-path-ids->names
+  "Given a set of permissions and `collections` (the map returned by the `with-collection-hierarchy` macro above, or a
+  sequential collection), replace the numeric IDs in the permissions paths with corresponding Collection names, making
+  our tests easier to read."
   [collections perms-set]
   ;; first build a function that will replace any instances of numeric IDs with their respective names
   ;; e.g. /123/ would become something like /A/
   ;; Do this by composing together a series of functions that will handle one string replacement for each ID + name
   ;; pair
-  (let [replace-ids-with-names (reduce comp (for [{:keys [id name]} (vals collections)]
+  (let [replace-ids-with-names (reduce comp (for [{:keys [id name]} (if (sequential? collections)
+                                                                      collections
+                                                                      (vals collections))]
                                               #(str/replace % (re-pattern (format "/%d/" id)) (str "/" name "/"))))]
     (set (for [perms-path perms-set]
            (replace-ids-with-names perms-path)))))
@@ -1242,23 +1319,21 @@
       (db/update! Collection (u/get-id c) :archived true)
       (db/select-one-field :archived Dashboard :id (u/get-id dashboard)))))
 
-;; Test that archiving *deletes* Pulses (Pulses cannot currently be archived)
-;; Pulse is in E; archiving E should cause Pulse to get deleted
+;; Test that archiving Collections applies to Pulses
+;; Pulse is in E; archiving E should cause Pulse to be archived
 (expect
-  false
   (with-collection-hierarchy [{:keys [e], :as collections}]
     (tt/with-temp Pulse [pulse {:collection_id (u/get-id e)}]
       (db/update! Collection (u/get-id e) :archived true)
-      (db/exists? Pulse :id (u/get-id pulse)))))
+      (db/select-one-field :archived Pulse :id (u/get-id pulse)))))
 
-;; Test that archiving *deletes* Pulses belonging to descendant Collections
+;; Test that archiving works on Pulses belonging to descendant Collections
 ;; Pulse is in E, a descendant of C; archiving C should cause Pulse to be archived
 (expect
-  false
   (with-collection-hierarchy [{:keys [c e], :as collections}]
     (tt/with-temp Pulse [pulse {:collection_id (u/get-id e)}]
       (db/update! Collection (u/get-id c) :archived true)
-      (db/exists? Pulse :id (u/get-id pulse)))))
+      (db/select-one-field :archived Pulse :id (u/get-id pulse)))))
 
 ;; Test that unarchiving applies to Cards
 ;; Card is in E; unarchiving E should cause Card to be unarchived
@@ -1459,6 +1534,13 @@
   (tt/with-temp User [my-cool-user]
     (let [personal-collection (collection/user->personal-collection my-cool-user)]
       (db/update! Collection (u/get-id personal-collection) :personal_owner_id (test-users/user->id :crowberto)))))
+
+;; Does hydrating `:personal_collection_id` force creation of Personal Collections?
+(expect
+  (tt/with-temp User [temp-user]
+    (-> (hydrate temp-user :personal_collection_id)
+        :personal_collection_id
+        integer?)))
 
 
 ;;; +----------------------------------------------------------------------------------------------------------------+

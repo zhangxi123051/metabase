@@ -2,6 +2,7 @@
 
 import type { Card, CardId, VisualizationSettings } from "./Card";
 import type { Parameter, ParameterMapping } from "./Parameter";
+import type { EmbeddingParams } from "metabase/public/lib/types";
 
 export type DashboardId = number;
 
@@ -18,6 +19,7 @@ export type Dashboard = {
   show_in_getting_started?: boolean,
   // incomplete
   parameters: Array<Parameter>,
+  collection_id: ?number,
 };
 
 // TODO Atte Keinänen 4/5/16: After upgrading Flow, use spread operator `...Dashboard`
@@ -26,8 +28,10 @@ export type DashboardWithCards = {
   name: string,
   description: ?string,
   ordered_cards: Array<DashCard>,
+  embedding_params: EmbeddingParams,
   // incomplete
   parameters: Array<Parameter>,
+  collection_id: ?number,
 };
 
 export type DashCardId = number;

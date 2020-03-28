@@ -9,8 +9,9 @@
   (:require [clojure.string :as str]
             [clojure.tools.logging :as log]
             [metabase.models.setting :as setting]
+            [metabase.plugins.classloader :as classloader]
             [metabase.util :as u]
-            [puppetlabs.i18n.core :refer [trs tru]]
+            [metabase.util.i18n :as ui18n :refer [trs tru]]
             [toucan
              [db :as db]
              [models :as models]]))
@@ -26,8 +27,8 @@
                    :name group-name)
                  (u/prog1 (db/insert! PermissionsGroup
                             :name group-name)
-                          (log/info (u/format-color 'green (trs "Created magic permissions group ''{0}'' (ID = {1})"
-                                                                group-name (:id <>)))))))))
+                   (log/info (u/format-color 'green (trs "Created magic permissions group ''{0}'' (ID = {1})"
+                                                         group-name (:id <>)))))))))
 
 (def ^{:arglists '([])} ^metabase.models.permissions_group.PermissionsGroupInstance
   all-users
@@ -82,6 +83,7 @@
   (db/delete! 'Permissions                 :group_id id)
   (db/delete! 'PermissionsGroupMembership  :group_id id)
   ;; Remove from LDAP mappings
+  (classloader/require 'metabase.integrations.ldap)
   (setting/set-json! :ldap-group-mappings
     (when-let [mappings (setting/get-json :ldap-group-mappings)]
       (zipmap (keys mappings)

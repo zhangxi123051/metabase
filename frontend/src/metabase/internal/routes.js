@@ -1,7 +1,20 @@
 /* @flow */
 
 import React from "react";
-import { Link, Route, IndexRoute } from "react-router";
+import { Link, Route, IndexRedirect } from "react-router";
+
+import {
+  Archived,
+  GenericError,
+  NotFound,
+  Unauthorized,
+} from "metabase/containers/ErrorPages";
+
+import ModalsPage from "./pages/ModalsPage";
+
+import fitViewport from "metabase/hoc/FitViewPort";
+
+const ErrorWithDetails = () => <GenericError details="Example error message" />;
 
 // $FlowFixMe: doesn't know about require.context
 const req = require.context(
@@ -29,9 +42,9 @@ const WelcomeApp = () => {
   );
 };
 
-const InternalLayout = ({ children }) => {
+const InternalLayout = fitViewport(({ children }) => {
   return (
-    <div className="flex flex-column full-height">
+    <div className="flex flex-column flex-full">
       <nav className="wrapper flex align-center py3 border-bottom">
         <a className="text-brand-hover" href="/_internal">
           <h4>Style Guide</h4>
@@ -52,11 +65,12 @@ const InternalLayout = ({ children }) => {
       <div className="flex flex-full">{children}</div>
     </div>
   );
-};
+});
 
 export default (
   <Route component={InternalLayout}>
-    <IndexRoute component={WelcomeApp} />
+    <IndexRedirect to="welcome" />
+    <Route path="welcome" component={WelcomeApp} />
     {Object.entries(PAGES).map(
       ([name, Component]) =>
         Component &&
@@ -64,5 +78,13 @@ export default (
           <Route path={name.toLowerCase()} component={Component} />
         )),
     )}
+    <Route path="modals" component={ModalsPage} />
+    <Route path="errors">
+      <Route path="404" component={NotFound} />
+      <Route path="archived" component={Archived} />
+      <Route path="unauthorized" component={Unauthorized} />
+      <Route path="generic" component={GenericError} />
+      <Route path="details" component={ErrorWithDetails} />
+    </Route>
   </Route>
 );

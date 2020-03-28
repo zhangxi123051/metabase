@@ -2,7 +2,7 @@
 import React, { Component } from "react";
 import PropTypes from "prop-types";
 import cx from "classnames";
-import Icon from "metabase/components/Icon.jsx";
+import Icon from "metabase/components/Icon";
 
 export default class CollapsedStep extends Component {
   static propTypes = {
@@ -20,13 +20,14 @@ export default class CollapsedStep extends Component {
   }
 
   render() {
-    let { isCompleted, stepCircleText, stepText } = this.props;
+    const { isCompleted, stepCircleText, stepText } = this.props;
 
     const classes = cx({
       SetupStep: true,
       rounded: true,
       full: true,
       relative: true,
+      "bg-white": true,
       "SetupStep--completed shadowed": isCompleted,
       "SetupStep--todo": !isCompleted,
     });

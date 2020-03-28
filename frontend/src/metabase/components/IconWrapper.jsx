@@ -1,7 +1,8 @@
 import { Flex } from "grid-styled";
+import { color } from "metabase/lib/colors";
 
 const IconWrapper = Flex.extend`
-  background: #f4f5f6;
+  background: ${color("bg-medium")};
   border-radius: 6px;
 `;
 

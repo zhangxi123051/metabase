@@ -1,13 +1,16 @@
 /* @flow */
 
-import React from "react";
+import { assocIn } from "icepick";
+import { t } from "ttag";
 
 import { createEntity, undo } from "metabase/lib/entities";
 import * as Urls from "metabase/lib/urls";
-import { assocIn } from "icepick";
+import { color } from "metabase/lib/colors";
 
-import CollectionSelect from "metabase/containers/CollectionSelect";
-import { canonicalCollectionId } from "metabase/entities/collections";
+import {
+  canonicalCollectionId,
+  getCollectionType,
+} from "metabase/entities/collections";
 
 import { POST, DELETE } from "metabase/lib/api";
 
@@ -62,8 +65,10 @@ const Questions = createEntity({
   objectSelectors: {
     getName: question => question && question.name,
     getUrl: question => question && Urls.question(question.id),
-    getColor: () => "#93B3C9",
-    getIcon: question => "beaker",
+    getColor: () => color("text-medium"),
+    getIcon: question =>
+      (require("metabase/visualizations").default.get(question.display) || {})
+        .iconName || "beaker",
   },
 
   reducer: (state = {}, { type, payload, error }) => {
@@ -75,17 +80,55 @@ const Questions = createEntity({
     return state;
   },
 
-  form: {
-    fields: [
-      { name: "name" },
-      { name: "description", type: "text" },
-      {
-        name: "collection_id",
-        title: "Collection",
-        // eslint-disable-next-line react/display-name
-        type: ({ field }) => <CollectionSelect {...field} />,
-      },
-    ],
+  forms: {
+    details: {
+      fields: [
+        { name: "name", title: t`Name` },
+        {
+          name: "description",
+          title: t`Description`,
+          type: "text",
+          placeholder: t`It's optional but oh, so helpful`,
+        },
+        {
+          name: "collection_id",
+          title: t`Collection`,
+          type: "collection",
+        },
+      ],
+    },
+    details_without_collection: {
+      fields: [
+        { name: "name", title: t`Name` },
+        {
+          name: "description",
+          title: t`Description`,
+          type: "text",
+          placeholder: t`It's optional but oh, so helpful`,
+        },
+      ],
+    },
+  },
+
+  // NOTE: keep in sync with src/metabase/api/card.clj
+  writableProperties: [
+    "name",
+    "dataset_query",
+    "display",
+    "description",
+    "visualization_settings",
+    "archived",
+    "enable_embedding",
+    "embedding_params",
+    "collection_id",
+    "collection_position",
+    "result_metadata",
+    "metadata_checksum",
+  ],
+
+  getAnalyticsMetadata([object], { action }, getState) {
+    const type = object && getCollectionType(object.collection_id, getState());
+    return type && `collection=${type}`;
   },
 });
 

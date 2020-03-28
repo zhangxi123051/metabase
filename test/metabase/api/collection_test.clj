@@ -1,6 +1,9 @@
 (ns metabase.api.collection-test
   "Tests for /api/collection endpoints."
-  (:require [expectations :refer :all]
+  (:require [clojure
+             [string :as str]
+             [test :refer :all]]
+            [expectations :refer :all]
             [metabase
              [email-test :as et]
              [util :as u]]
@@ -16,10 +19,14 @@
              [pulse-card :refer [PulseCard]]
              [pulse-channel :refer [PulseChannel]]
              [pulse-channel-recipient :refer [PulseChannelRecipient]]]
+            [metabase.test
+             [fixtures :as fixtures]
+             [util :as tu]]
             [metabase.test.data.users :refer [user->client user->id]]
-            [metabase.test.util :as tu]
             [toucan.db :as db]
             [toucan.util.test :as tt]))
+
+(use-fixtures :once (fixtures/initialize :test-users-personal-collections))
 
 ;;; +----------------------------------------------------------------------------------------------------------------+
 ;;; |                                                GET /collection                                                 |
@@ -28,49 +35,47 @@
 ;; check that we can get a basic list of collections
 ;; (for the purposes of test purposes remove the personal collections)
 (tt/expect-with-temp [Collection [collection]]
-  [(assoc (into {} collection) :can_write true)]
+  [{:parent_id nil, :effective_location nil, :effective_ancestors (), :can_write true, :name "Our analytics", :id "root"}
+   (assoc (into {} collection) :can_write true)]
   (for [collection ((user->client :crowberto) :get 200 "collection")
         :when (not (:personal_owner_id collection))]
     collection))
 
 ;; We should only see our own Personal Collections!
 (expect
-  ["Lucky Pigeon's Personal Collection"]
-  (do
-    (collection-test/force-create-personal-collections!)
-    ;; now fetch those Collections as the Lucky bird
-    (map :name ((user->client :lucky) :get 200 "collection"))))
+  ["Our analytics"
+   "Lucky Pigeon's Personal Collection"]
+  (map :name ((user->client :lucky) :get 200 "collection")))
 
 ;; ...unless we are *admins*
 (expect
-  ["Crowberto Corv's Personal Collection"
+  ["Our analytics"
+   "Crowberto Corv's Personal Collection"
    "Lucky Pigeon's Personal Collection"
    "Rasta Toucan's Personal Collection"
    "Trash Bird's Personal Collection"]
-  (do
-    (collection-test/force-create-personal-collections!)
-    ;; now fetch those Collections as a superuser
-    (map :name ((user->client :crowberto) :get 200 "collection"))))
+  (map :name ((user->client :crowberto) :get 200 "collection")))
 
 ;; check that we don't see collections if we don't have permissions for them
 (expect
-  ["Collection 1"
+  ["Our analytics"
+   "Collection 1"
    "Rasta Toucan's Personal Collection"]
-  (tt/with-temp* [Collection [collection-1 {:name "Collection 1"}]
-                  Collection [collection-2 {:name "Collection 2"}]]
-    (perms/grant-collection-read-permissions! (group/all-users) collection-1)
-    (collection-test/force-create-personal-collections!)
-    (map :name ((user->client :rasta) :get 200 "collection"))))
+  (tu/with-non-admin-groups-no-root-collection-perms
+    (tt/with-temp* [Collection [collection-1 {:name "Collection 1"}]
+                    Collection [collection-2 {:name "Collection 2"}]]
+      (perms/grant-collection-read-permissions! (group/all-users) collection-1)
+      (map :name ((user->client :rasta) :get 200 "collection")))))
 
 ;; check that we don't see collections if they're archived
 (expect
-  ["Rasta Toucan's Personal Collection"
+  ["Our analytics"
+   "Rasta Toucan's Personal Collection"
    "Regular Collection"]
   (tt/with-temp* [Collection [collection-1 {:name "Archived Collection", :archived true}]
                   Collection [collection-2 {:name "Regular Collection"}]]
     (perms/grant-collection-read-permissions! (group/all-users) collection-1)
     (perms/grant-collection-read-permissions! (group/all-users) collection-2)
-    (collection-test/force-create-personal-collections!)
     (map :name ((user->client :rasta) :get 200 "collection"))))
 
 ;; Check that if we pass `?archived=true` we instead see archived cards
@@ -80,7 +85,6 @@
                   Collection [collection-2 {:name "Regular Collection"}]]
     (perms/grant-collection-read-permissions! (group/all-users) collection-1)
     (perms/grant-collection-read-permissions! (group/all-users) collection-2)
-    (collection-test/force-create-personal-collections!)
     (map :name ((user->client :rasta) :get 200 "collection" :archived :true))))
 
 
@@ -98,8 +102,9 @@
 ;; check that collections detail properly checks permissions
 (expect
   "You don't have permissions to do that."
-  (tt/with-temp Collection [collection]
-    ((user->client :rasta) :get 403 (str "collection/" (u/get-id collection)))))
+  (tu/with-non-admin-groups-no-root-collection-perms
+    (tt/with-temp Collection [collection]
+      ((user->client :rasta) :get 403 (str "collection/" (u/get-id collection))))))
 
 
 ;;; ----------------------------------------- Cards, Dashboards, and Pulses ------------------------------------------
@@ -110,21 +115,22 @@
   (tu/obj->json->obj
     [{:id                  (u/get-id card)
       :name                (:name card)
-      :description         nil
       :collection_position nil
+      :display            "table"
+      :description         nil
       :favorite            false
       :model               "card"}])
   (tu/obj->json->obj
    ((user->client :crowberto) :get 200 (str "collection/" (u/get-id collection) "/items"))))
 
 (defn- do-with-some-children-of-collection [collection-or-id-or-nil f]
-  (collection-test/force-create-personal-collections!)
-  (let [collection-id-or-nil (when collection-or-id-or-nil
-                               (u/get-id collection-or-id-or-nil))]
-    (tt/with-temp* [Card       [_ {:name "Birthday Card",          :collection_id collection-id-or-nil}]
-                    Dashboard  [_ {:name "Dine & Dashboard",       :collection_id collection-id-or-nil}]
-                    Pulse      [_ {:name "Electro-Magnetic Pulse", :collection_id collection-id-or-nil}]]
-      (f))))
+  (tu/with-non-admin-groups-no-root-collection-perms
+    (let [collection-id-or-nil (when collection-or-id-or-nil
+                                 (u/get-id collection-or-id-or-nil))]
+      (tt/with-temp* [Card       [_ {:name "Birthday Card", :collection_id collection-id-or-nil}]
+                      Dashboard  [_ {:name "Dine & Dashboard", :collection_id collection-id-or-nil}]
+                      Pulse      [_ {:name "Electro-Magnetic Pulse", :collection_id collection-id-or-nil}]]
+        (f)))))
 
 (defmacro ^:private with-some-children-of-collection {:style/indent 1} [collection-or-id-or-nil & body]
   `(do-with-some-children-of-collection ~collection-or-id-or-nil (fn [] ~@body)))
@@ -133,13 +139,16 @@
   (merge {:id true, :collection_position nil} item-map))
 
 (defn- collection-item [collection-name & {:as extra-keypairs}]
-  (merge {:id true, :description nil,
-          :model "collection", :name collection-name}
+  (merge {:id          true
+          :description nil
+          :can_write   (str/ends-with? collection-name "Personal Collection")
+          :model       "collection"
+          :name        collection-name}
          extra-keypairs))
 
 ;; check that you get to see the children as appropriate
 (expect
-  (map default-item [{:name "Birthday Card", :description nil, :favorite false, :model "card"}
+  (map default-item [{:name "Birthday Card", :description nil, :favorite false, :model "card", :display "table"}
                      {:name "Dine & Dashboard", :description nil, :model "dashboard"}
                      {:name "Electro-Magnetic Pulse", :model "pulse"}])
   (tt/with-temp Collection [collection {:name "Debt Collection"}]
@@ -177,8 +186,9 @@
    :can_write           true
    :name                "Lucky Pigeon's Personal Collection"
    :personal_owner_id   (user->id :lucky)
-   :effective_ancestors ()
+   :effective_ancestors [{:metabase.models.collection/is-root? true, :name "Our analytics", :id "root", :can_write true}]
    :effective_location  "/"
+   :parent_id           nil
    :id                  (u/get-id (collection/user->personal-collection (user->id :lucky)))
    :location            "/"})
 
@@ -208,7 +218,7 @@
   (api-get-lucky-personal-collection :rasta, :expected-status-code 403))
 
 (def ^:private lucky-personal-subcollection-item
-  [(collection-item "Lucky's Personal Sub-Collection")])
+  [(collection-item "Lucky's Personal Sub-Collection" :can_write true)])
 
 (defn- api-get-lucky-personal-collection-with-subcollection [user-kw]
   (tt/with-temp Collection [_ {:name     "Lucky's Personal Sub-Collection"
@@ -267,7 +277,7 @@
 
 ;; ok, does a second-level Collection have its parent and its children?
 (expect
-  [{:effective_ancestors [{:name "A", :id true}]
+  [{:effective_ancestors [{:name "A", :id true, :can_write false}]
     :effective_location  "/A/"}
    (map collection-item ["D" "G"])]
   (with-collection-hierarchy [a b c d g]
@@ -275,8 +285,8 @@
 
 ;; what about a third-level Collection?
 (expect
-  [{:effective_ancestors [{:name "A", :id true}
-                          {:name "C", :id true}]
+  [{:effective_ancestors [{:name "A", :id true, :can_write false}
+                          {:name "C", :id true, :can_write false}]
     :effective_location  "/A/C/"}
    []]
   (with-collection-hierarchy [a b c d g]
@@ -285,7 +295,7 @@
 ;; for D: if we remove perms for C we should only have A as an ancestor; effective_location should lie and say we are
 ;; a child of A
 (expect
-  [{:effective_ancestors [{:name "A", :id true}]
+  [{:effective_ancestors [{:name "A", :id true, :can_write false}]
     :effective_location  "/A/"}
    []]
   (with-collection-hierarchy [a b d g]
@@ -293,7 +303,7 @@
 
 ;; for D: If, on the other hand, we remove A, we should see C as the only ancestor and as a root-level Collection.
 (expect
-  [{:effective_ancestors [{:name "C", :id true}]
+  [{:effective_ancestors [{:name "C", :id true, :can_write false}]
     :effective_location  "/C/"}
    []]
   (with-collection-hierarchy [b c d g]
@@ -301,7 +311,7 @@
 
 ;; for C: if we remove D we should get E and F as effective children
 (expect
-  [{:effective_ancestors [{:name "A", :id true}]
+  [{:effective_ancestors [{:name "A", :id true, :can_write false}]
     :effective_location  "/A/"}
    (map collection-item ["E" "F"])]
   (with-collection-hierarchy [a b c e f g]
@@ -331,17 +341,18 @@
 
 ;; Check that we can see stuff that isn't in any Collection -- meaning they're in the so-called "Root" Collection
 (expect
-  {:name                "Saved items"
+  {:name                "Our analytics"
    :id                  "root"
    :can_write           true
    :effective_location  nil
-   :effective_ancestors []}
+   :effective_ancestors []
+   :parent_id           nil}
   (with-some-children-of-collection nil
     ((user->client :crowberto) :get 200 "collection/root")))
 
 ;; Make sure you can see everything for Users that can see everything
 (expect
-  [(default-item {:name "Birthday Card", :description nil, :favorite false, :model "card"})
+  [(default-item {:name "Birthday Card", :description nil, :favorite false, :model "card", :display "table"})
    (collection-item "Crowberto Corv's Personal Collection")
    (default-item {:name "Dine & Dashboard", :description nil, :model "dashboard"})
    (default-item {:name "Electro-Magnetic Pulse", :model "pulse"})]
@@ -357,7 +368,7 @@
 
 ;; ...but if they have read perms for the Root Collection they should get to see them
 (expect
-  [(default-item {:name "Birthday Card", :description nil, :favorite false, :model "card"})
+  [(default-item {:name "Birthday Card", :description nil, :favorite false, :model "card", :display "table"})
    (default-item {:name "Dine & Dashboard", :description nil, :model "dashboard"})
    (default-item {:name "Electro-Magnetic Pulse", :model "pulse"})
    (collection-item "Rasta Toucan's Personal Collection")]
@@ -372,43 +383,40 @@
   [{:name        "Rasta Toucan's Personal Collection"
     :id          (u/get-id (collection/user->personal-collection (user->id :rasta)))
     :description nil
-    :model       "collection"}]
-  (do
-    (collection-test/force-create-personal-collections!)
-    ((user->client :rasta) :get 200 "collection/root/items")))
+    :model       "collection"
+    :can_write   true}]
+  ((user->client :rasta) :get 200 "collection/root/items"))
 
 ;; And for admins, only return our own Personal Collection (!)
 (expect
   [{:name        "Crowberto Corv's Personal Collection"
     :id          (u/get-id (collection/user->personal-collection (user->id :crowberto)))
     :description nil
-    :model       "collection"}]
-  (do
-    (collection-test/force-create-personal-collections!)
-    ((user->client :crowberto) :get 200 "collection/root/items")))
+    :model       "collection"
+    :can_write   true}]
+  ((user->client :crowberto) :get 200 "collection/root/items"))
 
 ;; That includes sub-collections of Personal Collections! I shouldn't see them!
 (expect
   [{:name        "Crowberto Corv's Personal Collection"
     :id          (u/get-id (collection/user->personal-collection (user->id :crowberto)))
     :description nil
-    :model       "collection"}]
-  (do
-    (collection-test/force-create-personal-collections!)
-    (tt/with-temp Collection [_ {:name     "Lucky's Sub-Collection"
-                                 :location (collection/children-location
-                                            (collection/user->personal-collection (user->id :lucky)))}]
-      ((user->client :crowberto) :get 200 "collection/root/items"))))
+    :model       "collection"
+    :can_write   true}]
+  (tt/with-temp Collection [_ {:name     "Lucky's Sub-Collection"
+                               :location (collection/children-location
+                                          (collection/user->personal-collection (user->id :lucky)))}]
+    ((user->client :crowberto) :get 200 "collection/root/items")))
 
 ;; Can we look for `archived` stuff with this endpoint?
 (expect
   [{:name                "Business Card"
     :description         nil
     :collection_position nil
+    :display             "table"
     :favorite            false
     :model               "card"}]
   (tt/with-temp Card [card {:name "Business Card", :archived true}]
-    (collection-test/force-create-personal-collections!)
     (for [item ((user->client :crowberto) :get 200 "collection/root/items?archived=true")]
       (dissoc item :id))))
 
@@ -419,7 +427,6 @@
   "Call the API with Rasta to fetch the 'Root' Collection and put the `:effective_` results in a nice format for the
   tests below."
   [& additional-get-params]
-  (collection-test/force-create-personal-collections!)
   [(format-ancestors-and-children ((user->client :rasta) :get 200 "collection/root"))
    (tu/boolean-ids-and-timestamps (apply (user->client :rasta) :get 200 "collection/root/items" additional-get-params))])
 
@@ -467,11 +474,30 @@
          {:name "Stamp Collection", :color "#123456"})
         (dissoc :id))))
 
-;; test that non-admins aren't allowed to create a collection
+;; test that non-admins aren't allowed to create a collection in the root collection
 (expect
   "You don't have permissions to do that."
-  ((user->client :rasta) :post 403 "collection"
-   {:name "Stamp Collection", :color "#123456"}))
+  (tu/with-non-admin-groups-no-root-collection-perms
+    ((user->client :rasta) :post 403 "collection"
+     {:name "Stamp Collection", :color "#123456"})))
+
+;; Can a non-admin user with Root Collection perms add a new collection to the Root Collection? (#8949)
+(expect
+  {:name              "Stamp Collection"
+   :description       nil
+   :color             "#123456"
+   :archived          false
+   :location          "/"
+   :personal_owner_id nil
+   :slug              "stamp_collection"}
+  (tu/with-model-cleanup [Collection]
+    (tu/with-non-admin-groups-no-root-collection-perms
+      (-> (tt/with-temp* [PermissionsGroup           [group]
+                          PermissionsGroupMembership [_ {:user_id (user->id :rasta), :group_id (u/get-id group)}]]
+            (perms/grant-collection-readwrite-permissions! group collection/root-collection)
+            ((user->client :rasta) :post 200 "collection"
+             {:name "Stamp Collection", :color "#123456"}))
+          (dissoc :id)))))
 
 ;; Can I create a Collection as a child of an existing collection?
 (expect
@@ -514,9 +540,10 @@
 ;; check that users without write perms aren't allowed to update a Collection
 (expect
   "You don't have permissions to do that."
-  (tt/with-temp Collection [collection]
-    ((user->client :rasta) :put 403 (str "collection/" (u/get-id collection))
-     {:name "My Beautiful Collection", :color "#ABCDEF"})))
+  (tu/with-non-admin-groups-no-root-collection-perms
+    (tt/with-temp Collection [collection]
+      ((user->client :rasta) :put 403 (str "collection/" (u/get-id collection))
+       {:name "My Beautiful Collection", :color "#ABCDEF"}))))
 
 ;; Archiving a collection should delete any alerts associated with questions in the collection
 (expect
@@ -551,9 +578,10 @@
 ;; I shouldn't be allowed to archive a Collection without proper perms
 (expect
   "You don't have permissions to do that."
-  (tt/with-temp Collection [collection]
-    ((user->client :rasta) :put 403 (str "collection/" (u/get-id collection))
-     {:archived true})))
+  (tu/with-non-admin-groups-no-root-collection-perms
+    (tt/with-temp Collection [collection]
+      ((user->client :rasta) :put 403 (str "collection/" (u/get-id collection))
+       {:archived true}))))
 
 ;; Perms checking should be recursive as well...
 ;;
@@ -561,11 +589,12 @@
 ;; also need perms for B
 (expect
   "You don't have permissions to do that."
-  (tt/with-temp* [Collection [collection-a]
-                  Collection [collection-b {:location (collection/children-location collection-a)}]]
-    (perms/grant-collection-readwrite-permissions! (group/all-users) collection-a)
-    ((user->client :rasta) :put 403 (str "collection/" (u/get-id collection-a))
-     {:archived true})))
+  (tu/with-non-admin-groups-no-root-collection-perms
+    (tt/with-temp* [Collection [collection-a]
+                    Collection [collection-b {:location (collection/children-location collection-a)}]]
+      (perms/grant-collection-readwrite-permissions! (group/all-users) collection-a)
+      ((user->client :rasta) :put 403 (str "collection/" (u/get-id collection-a))
+       {:archived true}))))
 
 ;; Can I *change* the `location` of a Collection? (i.e. move it into a different parent Colleciton)
 (expect
@@ -587,11 +616,12 @@
 ;; If I want to move A into B, I should need permissions for both A and B
 (expect
   "You don't have permissions to do that."
-  (tt/with-temp* [Collection [collection-a]
-                  Collection [collection-b]]
-    (perms/grant-collection-readwrite-permissions! (group/all-users) collection-a)
-    ((user->client :rasta) :put 403 (str "collection/" (u/get-id collection-a))
-     {:parent_id (u/get-id collection-b)})))
+  (tu/with-non-admin-groups-no-root-collection-perms
+    (tt/with-temp* [Collection [collection-a]
+                    Collection [collection-b]]
+      (perms/grant-collection-readwrite-permissions! (group/all-users) collection-a)
+      ((user->client :rasta) :put 403 (str "collection/" (u/get-id collection-a))
+       {:parent_id (u/get-id collection-b)}))))
 
 ;; Perms checking should be recursive as well...
 ;;
@@ -603,13 +633,14 @@
 ;; C
 (expect
   "You don't have permissions to do that."
-  (tt/with-temp* [Collection [collection-a]
-                  Collection [collection-b {:location (collection/children-location collection-a)}]
-                  Collection [collection-c]]
-    (doseq [collection [collection-a collection-b]]
-      (perms/grant-collection-readwrite-permissions! (group/all-users) collection))
-    ((user->client :rasta) :put 403 (str "collection/" (u/get-id collection-a))
-     {:parent_id (u/get-id collection-c)})))
+  (tu/with-non-admin-groups-no-root-collection-perms
+    (tt/with-temp* [Collection [collection-a]
+                    Collection [collection-b {:location (collection/children-location collection-a)}]
+                    Collection [collection-c]]
+      (doseq [collection [collection-a collection-b]]
+        (perms/grant-collection-readwrite-permissions! (group/all-users) collection))
+      ((user->client :rasta) :put 403 (str "collection/" (u/get-id collection-a))
+       {:parent_id (u/get-id collection-c)}))))
 
 
 ;; Create A, B, and C; B is a child of A. Grant perms for A and C. Moving A into C should fail because we need perms
@@ -620,13 +651,14 @@
 ;; C*
 (expect
   "You don't have permissions to do that."
-  (tt/with-temp* [Collection [collection-a]
-                  Collection [collection-b {:location (collection/children-location collection-a)}]
-                  Collection [collection-c]]
-    (doseq [collection [collection-a collection-c]]
-      (perms/grant-collection-readwrite-permissions! (group/all-users) collection))
-    ((user->client :rasta) :put 403 (str "collection/" (u/get-id collection-a))
-     {:parent_id (u/get-id collection-c)})))
+  (tu/with-non-admin-groups-no-root-collection-perms
+    (tt/with-temp* [Collection [collection-a]
+                    Collection [collection-b {:location (collection/children-location collection-a)}]
+                    Collection [collection-c]]
+      (doseq [collection [collection-a collection-c]]
+        (perms/grant-collection-readwrite-permissions! (group/all-users) collection))
+      ((user->client :rasta) :put 403 (str "collection/" (u/get-id collection-a))
+       {:parent_id (u/get-id collection-c)}))))
 
 ;; Create A, B, and C; B is a child of A. Grant perms for B and C. Moving A into C should fail because we need perms
 ;; for A:
@@ -636,10 +668,11 @@
 ;; C*
 (expect
   "You don't have permissions to do that."
-  (tt/with-temp* [Collection [collection-a]
-                  Collection [collection-b {:location (collection/children-location collection-a)}]
-                  Collection [collection-c]]
-    (doseq [collection [collection-b collection-c]]
-      (perms/grant-collection-readwrite-permissions! (group/all-users) collection))
-    ((user->client :rasta) :put 403 (str "collection/" (u/get-id collection-a))
-     {:parent_id (u/get-id collection-c)})))
+  (tu/with-non-admin-groups-no-root-collection-perms
+    (tt/with-temp* [Collection [collection-a]
+                    Collection [collection-b {:location (collection/children-location collection-a)}]
+                    Collection [collection-c]]
+      (doseq [collection [collection-b collection-c]]
+        (perms/grant-collection-readwrite-permissions! (group/all-users) collection))
+      ((user->client :rasta) :put 403 (str "collection/" (u/get-id collection-a))
+       {:parent_id (u/get-id collection-c)}))))

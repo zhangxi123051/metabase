@@ -1,6 +1,7 @@
 import React from "react";
 
-import Icon from "metabase/components/Icon.jsx";
+import Icon from "metabase/components/Icon";
+import { color } from "metabase/lib/colors";
 
 const SidebarSection = ({ title, icon, extra, children }) => (
   <div className="px2 pt1">
@@ -9,7 +10,10 @@ const SidebarSection = ({ title, icon, extra, children }) => (
       <span className="pl1 Sidebar-header">{title}</span>
       {extra && <span className="float-right">{extra}</span>}
     </div>
-    <div className="rounded bg-white" style={{ border: "1px solid #E5E5E5" }}>
+    <div
+      className="rounded bg-white"
+      style={{ border: `1px solid ${color("border")}` }}
+    >
       {children}
     </div>
   </div>

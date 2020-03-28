@@ -1,13 +1,14 @@
 import React, { Component } from "react";
 import PropTypes from "prop-types";
-import { Link } from "react-router";
-import { t } from "c-3po";
+import { t } from "ttag";
 
-import Icon from "metabase/components/Icon.jsx";
-import SidebarSection from "./SidebarSection.jsx";
+import Icon from "metabase/components/Icon";
+import Ellipsified from "metabase/components/Ellipsified";
+import Link from "metabase/components/Link";
+import SidebarSection from "./SidebarSection";
 import * as Urls from "metabase/lib/urls";
 
-import { normal } from "metabase/lib/colors";
+import { color } from "metabase/lib/colors";
 
 export default class RecentViews extends Component {
   static propTypes = {
@@ -48,7 +49,9 @@ export default class RecentViews extends Component {
                     size={18}
                     style={{
                       color:
-                        iconName === "dashboard" ? normal.purple : normal.blue,
+                        iconName === "dashboard"
+                          ? color("dashboard")
+                          : color("brand"),
                     }}
                   />
                   <Link
@@ -56,18 +59,19 @@ export default class RecentViews extends Component {
                     data-metabase-event={
                       "Recent Views;" + item.model + ";" + item.cnt
                     }
-                    className="ml1 flex-full link"
+                    ml={1}
+                    className="link overflow-hidden"
                   >
-                    {item.model_object.name}
+                    <Ellipsified>{item.model_object.name}</Ellipsified>
                   </Link>
                 </li>
               );
             })}
           </ul>
         ) : (
-          <div className="flex flex-column layout-centered text-normal text-grey-2">
+          <div className="flex flex-column layout-centered text-normal text-light">
             <p
-              className="p3 text-centered text-grey-2"
+              className="p3 text-centered text-light"
               style={{ maxWidth: "100%" }}
             >
               {t`You haven't looked at any dashboards or questions recently`}

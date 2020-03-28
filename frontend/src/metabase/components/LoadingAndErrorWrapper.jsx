@@ -2,8 +2,8 @@
 import React, { Component } from "react";
 import PropTypes from "prop-types";
 
-import LoadingSpinner from "metabase/components/LoadingSpinner.jsx";
-import { t } from "c-3po";
+import LoadingSpinner from "metabase/components/LoadingSpinner";
+import { t } from "ttag";
 import cx from "classnames";
 
 export default class LoadingAndErrorWrapper extends Component {
@@ -42,10 +42,11 @@ export default class LoadingAndErrorWrapper extends Component {
       // NOTE Atte Keinänen 5/10/17 Dashboard API endpoint returns the error as JSON with `message` field
       (error.data && (error.data.message ? error.data.message : error.data)) ||
       error.statusText ||
-      error.message;
+      error.message ||
+      error;
 
-    if (!errorMessage || typeof errorMessage === "object") {
-      errorMessage = t`An error occured`;
+    if (!errorMessage || typeof errorMessage !== "string") {
+      errorMessage = t`An error occurred`;
     }
     return errorMessage;
   }
@@ -109,13 +110,18 @@ export default class LoadingAndErrorWrapper extends Component {
     );
 
     if (noWrapper && !error && !loading) {
-      return React.Children.only(this.getChildren());
+      const children = this.getChildren();
+      // special case for loading wrapper with null/undefined child
+      if (children == null) {
+        return null;
+      }
+      return React.Children.only(children);
     }
     return (
       <div className={this.props.className} style={this.props.style}>
         {error ? (
           <div className={contentClassName}>
-            <h2 className="text-normal text-grey-2 ie-wrap-content-fix">
+            <h2 className="text-normal text-light ie-wrap-content-fix">
               {this.getErrorMessage()}
             </h2>
           </div>
@@ -123,7 +129,7 @@ export default class LoadingAndErrorWrapper extends Component {
           <div className={contentClassName}>
             {loadingScenes && loadingScenes[sceneIndex]}
             {!loadingScenes && showSpinner && <LoadingSpinner />}
-            <h2 className="text-normal text-grey-2 mt1">
+            <h2 className="text-normal text-light mt1">
               {loadingMessages[messageIndex]}
             </h2>
           </div>

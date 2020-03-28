@@ -2,9 +2,7 @@
   "Classifier that infers the special type of a Field based on its name and base type."
   (:require [clojure.string :as str]
             [clojure.tools.logging :as log]
-            [metabase
-             [config :as config]
-             [util :as u]]
+            [metabase.config :as config]
             [metabase.models.database :refer [Database]]
             [metabase.sync
              [interface :as i]
@@ -21,6 +19,7 @@
 (def ^:private time-type        #{:type/Time})
 (def ^:private date-type        #{:type/Date})
 (def ^:private number-type      #{:type/Number})
+(def ^:private any-type         #{:type/*})
 
 
 (def ^:private pattern+base-types+special-type
@@ -31,7 +30,8 @@
 
    *  Convert field name to lowercase before matching against a pattern
    *  Consider a nil set-of-valid-base-types to mean \"match any base type\""
-  [[#"^.*_lat$"                    float-type       :type/Latitude]
+  [[#"^id$"                        any-type         :type/PK]
+   [#"^.*_lat$"                    float-type       :type/Latitude]
    [#"^.*_lon$"                    float-type       :type/Longitude]
    [#"^.*_lng$"                    float-type       :type/Longitude]
    [#"^.*_long$"                   float-type       :type/Longitude]
@@ -66,9 +66,6 @@
    [#"^zip(?:_?)code$"             int-or-text-type :type/ZipCode]
    [#"discount"                    number-type      :type/Discount]
    [#"income"                      number-type      :type/Income]
-   [#"amount"                      number-type      :type/Income]
-   [#"^total"                      number-type      :type/Income]
-   [#"_total$"                     number-type      :type/Income]
    [#"quantity"                    int-type         :type/Quantity]
    [#"count$"                      int-type         :type/Quantity]
    [#"number"                      int-type         :type/Quantity]
@@ -79,6 +76,15 @@
    [#"create"                      date-type        :type/CreationDate]
    [#"create"                      time-type        :type/CreationTime]
    [#"create"                      timestamp-type   :type/CreationTimestamp]
+   [#"start"                       date-type        :type/CreationDate]
+   [#"start"                       time-type        :type/CreationTime]
+   [#"start"                       timestamp-type   :type/CreationTimestamp]
+   [#"cancel"                      date-type        :type/CancelationDate]
+   [#"cancel"                      time-type        :type/CancelationTime]
+   [#"cancel"                      timestamp-type   :type/CancelationTimestamp]
+   [#"delet(?:e|i)"                date-type        :type/DeletionDate]
+   [#"delet(?:e|i)"                time-type        :type/DeletionTime]
+   [#"delet(?:e|i)"                timestamp-type   :type/DeletionTimestamp]
    [#"source"                      int-or-text-type :type/Source]
    [#"channel"                     int-or-text-type :type/Source]
    [#"share"                       float-type       :type/Share]
@@ -107,31 +113,44 @@
 (when-not config/is-prod?
   (doseq [[name-pattern base-types special-type] pattern+base-types+special-type]
     (assert (instance? java.util.regex.Pattern name-pattern))
-    (assert (every? (u/rpartial isa? :type/*) base-types))
+    (assert (every? #(isa? % :type/*) base-types))
     (assert (isa? special-type :type/*))))
 
 
 (s/defn ^:private special-type-for-name-and-base-type :- (s/maybe su/FieldType)
   "If `name` and `base-type` matches a known pattern, return the `special_type` we should assign to it."
   [field-name :- su/NonBlankString, base-type :- su/FieldType]
-  (or (when (= "id" (str/lower-case field-name)) :type/PK)
-      (some (fn [[name-pattern valid-base-types special-type]]
-              (when (and (some (partial isa? base-type) valid-base-types)
-                         (re-find name-pattern (str/lower-case field-name)))
-                special-type))
-            pattern+base-types+special-type)))
+  (let [field-name (str/lower-case field-name)]
+    (some (fn [[name-pattern valid-base-types special-type]]
+            (when (and (some (partial isa? base-type) valid-base-types)
+                       (re-find name-pattern field-name))
+              special-type))
+          pattern+base-types+special-type)))
 
-(s/defn infer-special-type :- (s/maybe i/FieldInstance)
-  "Classifer that infers the special type of a FIELD based on its name and base type."
-  [field :- i/FieldInstance, _ :- (s/maybe i/Fingerprint)]
+(def ^:private FieldOrColumn
+  "Schema that allows a `metabase.model.field/Field` or a column from a query resultset"
+  {:name                          s/Str ; Some DBs such as MSSQL can return columns with blank name
+   :base_type                     s/Keyword
+   (s/optional-key :special_type) (s/maybe s/Keyword)
+   s/Any                          s/Any})
+
+(s/defn infer-special-type :- (s/maybe s/Keyword)
+  "Classifer that infers the special type of a `field` based on its name and base type."
+  [field-or-column :- FieldOrColumn]
   ;; Don't overwrite keys, else we're ok with overwriting as a new more precise type might have
   ;; been added.
-  (when (not-any? (partial isa? (:special_type field)) [:type/PK :type/FK])
-    (when-let [inferred-special-type (special-type-for-name-and-base-type (:name field) (:base_type field))]
-      (log/debug (format "Based on the name of %s, we're giving it a special type of %s."
-                         (sync-util/name-for-logging field)
-                         inferred-special-type))
-      (assoc field :special_type inferred-special-type))))
+  (when-not (or (some (partial isa? (:special_type field-or-column)) [:type/PK :type/FK])
+                (str/blank? (:name field-or-column)))
+    (special-type-for-name-and-base-type (:name field-or-column) (:base_type field-or-column))))
+
+(s/defn infer-and-assoc-special-type  :- (s/maybe FieldOrColumn)
+  "Returns `field-or-column` with a computed special type based on the name and base type of the `field-or-column`"
+  [field-or-column :- FieldOrColumn, _ :- (s/maybe i/Fingerprint)]
+  (when-let [inferred-special-type (infer-special-type field-or-column)]
+    (log/debug (format "Based on the name of %s, we're giving it a special type of %s."
+                       (sync-util/name-for-logging field-or-column)
+                       inferred-special-type))
+    (assoc field-or-column :special_type inferred-special-type)))
 
 (defn- prefix-or-postfix
   [s]

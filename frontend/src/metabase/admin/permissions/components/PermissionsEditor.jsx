@@ -1,29 +1,31 @@
 import React from "react";
 
-import LoadingAndErrorWrapper from "metabase/components/LoadingAndErrorWrapper.jsx";
-import Confirm from "metabase/components/Confirm.jsx";
-import PermissionsGrid from "../components/PermissionsGrid.jsx";
-import PermissionsConfirm from "../components/PermissionsConfirm.jsx";
-import EditBar from "metabase/components/EditBar.jsx";
-import Breadcrumbs from "metabase/components/Breadcrumbs.jsx";
+import LoadingAndErrorWrapper from "metabase/components/LoadingAndErrorWrapper";
+import Confirm from "metabase/components/Confirm";
+import PermissionsGrid from "../components/PermissionsGrid";
+import PermissionsConfirm from "../components/PermissionsConfirm";
+import PermissionsTabs from "../components/PermissionsTabs";
+import EditBar from "metabase/components/EditBar";
+import Breadcrumbs from "metabase/components/Breadcrumbs";
 import Button from "metabase/components/Button";
-import { t } from "c-3po";
+import { t } from "ttag";
 import cx from "classnames";
 
 import _ from "underscore";
 
 const PermissionsEditor = ({
-  title = t`Permissions`,
+  tab,
   admin,
   grid,
   onUpdatePermission,
   onSave,
   onCancel,
+  onChangeTab,
   confirmCancel,
   isDirty,
-  saveError,
   diff,
   location,
+  children,
 }) => {
   const saveButton = (
     <Confirm
@@ -64,13 +66,17 @@ const PermissionsEditor = ({
               buttons={[cancelButton, saveButton]}
             />
           )}
-          <div className="wrapper pt2">
-            {grid && grid.crumbs ? (
+          {tab && (
+            <div className="border-bottom mb3">
+              <PermissionsTabs tab={tab} onChangeTab={onChangeTab} />
+            </div>
+          )}
+          {grid && grid.crumbs && grid.crumbs.length > 0 ? (
+            <div className="px2 pb1 ml3">
               <Breadcrumbs className="py1" crumbs={grid.crumbs} />
-            ) : (
-              <h2>{title}</h2>
-            )}
-          </div>
+            </div>
+          ) : null}
+          {children}
           <PermissionsGrid
             className="flex-full"
             grid={grid}
@@ -88,9 +94,8 @@ PermissionsEditor.defaultProps = {
 };
 
 function getEntityAndGroupIdFromLocation({ query = {} } = {}) {
-  query = _.mapObject(
-    query,
-    value => (isNaN(value) ? value : parseFloat(value)),
+  query = _.mapObject(query, value =>
+    isNaN(value) ? value : parseFloat(value),
   );
   const entityId = _.omit(query, "groupId");
   const groupId = query.groupId;

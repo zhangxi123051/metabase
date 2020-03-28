@@ -1,11 +1,11 @@
 import React, { Component } from "react";
 import { connect } from "react-redux";
-import { t } from "c-3po";
+import { t } from "ttag";
 
 import ModalContent from "metabase/components/ModalContent";
 import Button from "metabase/components/Button";
 import Link from "metabase/components/Link";
-import PermissionsGrid from "../components/PermissionsGrid.jsx";
+import PermissionsGrid from "../components/PermissionsGrid";
 import fitViewport from "metabase/hoc/FitViewPort";
 
 import { CollectionsApi } from "metabase/services";
@@ -14,7 +14,6 @@ import Collections from "metabase/entities/collections";
 import {
   getCollectionsPermissionsGrid,
   getIsDirty,
-  getSaveError,
   getDiff,
 } from "../selectors";
 import { initialize, updatePermission, savePermissions } from "../permissions";
@@ -26,7 +25,6 @@ const mapStateToProps = (state, props) => {
       singleCollectionMode: true,
     }),
     isDirty: getIsDirty(state, props),
-    saveError: getSaveError(state, props),
     diff: getDiff(state, props),
   };
 };
@@ -38,7 +36,10 @@ const mapDispatchToProps = {
   onSave: savePermissions,
 };
 
-@connect(mapStateToProps, mapDispatchToProps)
+@connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)
 @fitViewport
 export default class CollectionPermissionsModal extends Component {
   componentWillMount() {
@@ -52,10 +53,10 @@ export default class CollectionPermissionsModal extends Component {
         title={t`Permissions for this collection`}
         onClose={onClose}
         footer={[
-          <Link className="link" to="/collections/permissions">
-            See all collection permissions
+          <Link className="link" to="/admin/permissions/collections">
+            {t`See all collection permissions`}
           </Link>,
-          <Button onClick={onClose}>Cancel</Button>,
+          <Button onClick={onClose}>{t`Cancel`}</Button>,
           <Button
             primary
             disabled={!isDirty}
@@ -68,7 +69,7 @@ export default class CollectionPermissionsModal extends Component {
               }
             }}
           >
-            Save
+            {t`Save`}
           </Button>,
         ]}
       >
@@ -78,7 +79,7 @@ export default class CollectionPermissionsModal extends Component {
               className="spread"
               grid={grid}
               onUpdatePermission={onUpdatePermission}
-              cellHeight={40}
+              cellHeight={60}
               isPivoted={true}
               showHeader={false}
             />

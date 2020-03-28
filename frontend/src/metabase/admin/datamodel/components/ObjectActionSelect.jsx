@@ -2,11 +2,11 @@ import React, { Component } from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router";
 
-import Icon from "metabase/components/Icon.jsx";
-import PopoverWithTrigger from "metabase/components/PopoverWithTrigger.jsx";
-import ModalWithTrigger from "metabase/components/ModalWithTrigger.jsx";
-import { t } from "c-3po";
-import ObjectRetireModal from "./ObjectRetireModal.jsx";
+import Icon from "metabase/components/Icon";
+import PopoverWithTrigger from "metabase/components/PopoverWithTrigger";
+import ModalWithTrigger from "metabase/components/ModalWithTrigger";
+import { t } from "ttag";
+import ObjectRetireModal from "./ObjectRetireModal";
 
 import { capitalize } from "metabase/lib/formatting";
 
@@ -29,7 +29,7 @@ export default class ObjectActionsSelect extends Component {
         <PopoverWithTrigger
           ref="popover"
           triggerElement={
-            <span className="text-grey-1 text-grey-4-hover">
+            <span className="text-light text-medium-hover">
               <Icon name={"ellipsis"} />
             </span>
           }

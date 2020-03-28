@@ -1,7 +1,7 @@
 :root {
-  --title-color: #606e7b;
-  --subtitle-color: #aab7c3;
-  --icon-width: calc(48px + 1rem);
+  --title-color: var(--color-text-medium);
+  --subtitle-color: var(--color-text-medium);
+  --icon-width: 60px;
 }
 
 :local(.guideEmpty) {
@@ -20,7 +20,6 @@
 
 :local(.columnHeader) {
   composes: flex flex-full from "style";
-  margin-left: var(--icon-width);
   padding-top: 20px;
   padding-bottom: 20px;
 }
@@ -31,13 +30,22 @@
 }
 
 :local(.schemaSeparator) {
-  composes: text-grey-2 mt2 from "style";
+  composes: text-light mt2 from "style";
   margin-left: var(--icon-width);
   font-size: 18px;
 }
 
 :local(.tableActualName) {
-  color: var(--subtitle-color);
+  font-family: "Lucida Console", Monaco, monospace;
+  font-size: 13px;
+  line-height: 1.4em;
+  letter-spacing: 1px;
+  white-space: pre-wrap;
+  color: var(--color-text-medium);
+  background-color: var(--color-bg-light);
+  border: 1px solid var(--color-text-light);
+  border-radius: 4px;
+  padding: 0.2em 0.4em;
 }
 
 :local(.guideLeftPadded) {
@@ -103,7 +111,7 @@
 :local(.guideEditHeader) {
   composes: full text-body my4 from "style";
   max-width: 550px;
-  color: var(--dark-color);
+  color: var(--color-text-dark);
 }
 
 :local(.guideEditHeaderTitle) {
@@ -138,7 +146,7 @@
 
 :local(.guideEditSubtitle) {
   composes: text-body from "style";
-  color: var(--grey-2);
+  color: var(--color-text-light);
   font-size: 16px;
   max-width: 700px;
 }

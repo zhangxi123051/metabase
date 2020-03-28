@@ -2,14 +2,15 @@
 import React from "react";
 import PropTypes from "prop-types";
 
-import Icon from "metabase/components/Icon.jsx";
+import Icon from "metabase/components/Icon";
 
 import cx from "classnames";
 
-const SelectButton = ({ className, children, hasValue = true }) => (
+const SelectButton = ({ className, style, children, hasValue = true }) => (
   <div
+    style={style}
     className={cx(className, "AdminSelect flex align-center", {
-      "text-grey-3": !hasValue,
+      "text-medium": !hasValue,
     })}
   >
     <span className="AdminSelect-content mr1">{children}</span>
@@ -23,6 +24,7 @@ const SelectButton = ({ className, children, hasValue = true }) => (
 
 SelectButton.propTypes = {
   className: PropTypes.string,
+  style: PropTypes.object,
   children: PropTypes.any,
   hasValue: PropTypes.any,
 };

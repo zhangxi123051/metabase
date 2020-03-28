@@ -54,10 +54,10 @@ export type TemplateTagType = "text" | "number" | "date" | "dimension";
 export type TemplateTag = {
   id: TemplateTagId,
   name: TemplateTagName,
-  display_name: string,
+  "display-name": string,
   type: TemplateTagType,
   dimension?: LocalFieldReference,
-  widget_type?: ParameterType,
+  "widget-type"?: ParameterType,
   required?: boolean,
   default?: string,
 };
@@ -66,15 +66,17 @@ export type TemplateTags = { [key: TemplateTagName]: TemplateTag };
 
 export type NativeQuery = {
   query: string,
-  template_tags: TemplateTags,
+  "template-tags": TemplateTags,
 };
 
 export type StructuredQuery = {
-  source_table: ?TableId,
+  "source-table"?: ?TableId,
+  "source-query"?: ?StructuredQuery,
   aggregation?: AggregationClause,
   breakout?: BreakoutClause,
   filter?: FilterClause,
-  order_by?: OrderByClause,
+  joins?: JoinClause,
+  "order-by"?: OrderByClause,
   limit?: LimitClause,
   expressions?: ExpressionClause,
   fields?: FieldsClause,
@@ -88,7 +90,6 @@ export type AggregationClause =
  * An aggregation MBQL clause
  */
 export type Aggregation =
-  | Rows // @deprecated: implicit when there are no aggregations
   | CountAgg
   | CountFieldAgg
   | AvgAgg
@@ -100,24 +101,18 @@ export type Aggregation =
   | MaxAgg
   | MetricAgg;
 
-/**
- * @deprecated: implicit when there are no aggregations
- */
-type Rows = ["rows"];
-
 type CountAgg = ["count"];
 
 type CountFieldAgg = ["count", ConcreteField];
 type AvgAgg = ["avg", ConcreteField];
-type CumSumAgg = ["cum_sum", ConcreteField];
+type CumSumAgg = ["cum-sum", ConcreteField];
 type DistinctAgg = ["distinct", ConcreteField];
 type StdDevAgg = ["stddev", ConcreteField];
 type SumAgg = ["sum", ConcreteField];
 type MinAgg = ["min", ConcreteField];
 type MaxAgg = ["max", ConcreteField];
 
-// NOTE: currently the backend expects METRIC to be uppercase
-type MetricAgg = ["METRIC", MetricId];
+type MetricAgg = ["metric", MetricId];
 
 export type BreakoutClause = Array<Breakout>;
 export type Breakout = ConcreteField;
@@ -194,7 +189,7 @@ export type TimeIntervalFilter =
       ConcreteField,
       RelativeDatetimePeriod,
       RelativeDatetimeUnit,
-      FilterOptions,
+      TimeIntervalFilterOptions,
     ];
 
 export type TimeIntervalFilterOptions = {
@@ -204,10 +199,29 @@ export type TimeIntervalFilterOptions = {
 export type FilterOptions = StringFilterOptions | TimeIntervalFilterOptions;
 
 // NOTE: currently the backend expects SEGMENT to be uppercase
-export type SegmentFilter = ["SEGMENT", SegmentId];
+export type SegmentFilter = ["segment", SegmentId];
 
 export type OrderByClause = Array<OrderBy>;
-export type OrderBy = [Field, "descending" | "ascending"];
+export type OrderBy = ["asc" | "desc", Field];
+
+export type JoinStrategy =
+  | "left-join"
+  | "right-join"
+  | "inner-join"
+  | "full-join";
+export type JoinAlias = string;
+export type JoinCondition = Filter;
+export type JoinFields = "all" | "none" | JoinedFieldReference[];
+
+export type JoinClause = Array<Join>;
+export type Join = {
+  "source-table"?: TableId,
+  "source-query"?: StructuredQuery,
+  condition: JoinCondition,
+  alias?: JoinAlias,
+  strategy?: JoinStrategy,
+  fields?: JoinFields,
+};
 
 export type LimitClause = number;
 
@@ -216,17 +230,24 @@ export type Field = ConcreteField | AggregateField;
 export type ConcreteField =
   | LocalFieldReference
   | ForeignFieldReference
+  | JoinedFieldReference
   | ExpressionReference
   | DatetimeField
   | BinnedField;
 
 export type LocalFieldReference = ["field-id", FieldId] | FieldId; // @deprecated: use ["field-id", FieldId]
 
-export type ForeignFieldReference = ["fk->", FieldId, FieldId];
+export type ForeignFieldReference = [
+  "fk->",
+  ["field-id", FieldId],
+  ["field-id", FieldId],
+];
 
 export type ExpressionReference = ["expression", ExpressionName];
 
 export type FieldLiteral = ["field-literal", string, BaseType]; // ["field-literal", name, base-type]
+
+export type JoinedFieldReference = ["joined-field", JoinAlias, ConcreteField];
 
 export type DatetimeField =
   | [
@@ -271,4 +292,4 @@ export type Expression = [
 export type ExpressionOperator = "+" | "-" | "*" | "/";
 export type ExpressionOperand = ConcreteField | NumericLiteral | Expression;
 
-export type FieldsClause = Field[];
+export type FieldsClause = ConcreteField[];

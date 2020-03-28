@@ -15,7 +15,7 @@
              [metabase-metadata :as metabase-metadata]
              [sync-timezone :as sync-tz]
              [tables :as sync-tables]]
-            [puppetlabs.i18n.core :refer [trs]]
+            [metabase.util.i18n :refer [trs]]
             [schema.core :as s]))
 
 (defn- sync-fields-summary [{:keys [total-fields updated-fields] :as step-info}]
@@ -45,13 +45,13 @@
    (sync-util/create-sync-step "sync-metabase-metadata" metabase-metadata/sync-metabase-metadata!)])
 
 (s/defn sync-db-metadata!
-  "Sync the metadata for a Metabase DATABASE. This makes sure child Table & Field objects are synchronized."
+  "Sync the metadata for a Metabase `database`. This makes sure child Table & Field objects are synchronized."
   [database :- i/DatabaseInstance]
   (sync-util/sync-operation :sync-metadata database (format "Sync metadata for %s" (sync-util/name-for-logging database))
     (sync-util/run-sync-operation "sync" database sync-steps)))
 
 (s/defn sync-table-metadata!
-  "Sync the metadata for an individual TABLE -- make sure Fields and FKs are up-to-date."
+  "Sync the metadata for an individual `table` -- make sure Fields and FKs are up-to-date."
   [table :- i/TableInstance]
   (sync-fields/sync-fields-for-table! table)
   (sync-fks/sync-fks-for-table! table))

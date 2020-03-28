@@ -1,6 +1,6 @@
 import React from "react";
 
-import Radio from "metabase/components/Radio.jsx";
+import Radio from "metabase/components/Radio";
 
 const ChartSettingRadio = ({ value, onChange, options = [], className }) => (
   <Radio
@@ -8,7 +8,7 @@ const ChartSettingRadio = ({ value, onChange, options = [], className }) => (
     value={value}
     onChange={onChange}
     options={options}
-    isVertical
+    vertical
   />
 );
 

@@ -1,13 +1,12 @@
 :root {
-  --title-color: #606e7b;
-  --icon-width: calc(48px + 1rem);
+  --title-color: var(--color-text-medium);
 }
 
 :local(.headerBody) {
-  composes: flex flex-full border-bottom text-dark text-bold from "style";
+  composes: flex flex-full text-dark text-bold from "style";
   overflow: hidden;
   align-items: center;
-  border-color: #edf5fb;
+  border-color: var(--color-border);
 }
 
 :local(.headerTextInput) {
@@ -23,24 +22,22 @@
 }
 
 :local(.subheaderBody) {
-  composes: text-dark from "style";
-  margin-left: var(--icon-width);
-  font-size: 16px;
+  composes: text-medium text-bold from "style";
+  font-size: 14px;
 }
 
 :local(.subheaderLink) {
-  color: var(--primary-button-bg-color);
+  color: var(--color-brand);
   text-decoration: none;
 }
 
 :local(.subheaderLink):hover {
-  color: color(var(--primary-button-border-color) shade(10%));
+  color: var(--color-brand);
   transition: color 0.3s linear;
 }
 
 :local(.headerSchema) {
-  composes: text-grey-2 absolute from "style";
-  left: var(--icon-width);
+  composes: text-light absolute from "style";
   top: -10px;
   font-size: 12px;
 }
